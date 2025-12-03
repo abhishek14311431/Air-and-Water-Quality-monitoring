@@ -1,3 +1,14 @@
+<p align="center">
+  <img src="https://img.shields.io/badge/Status-Live%20✔-22c55e?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Framework-Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white" />
+  <img src="https://img.shields.io/badge/Machine%20Learning-RandomForest-0ea5e9?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Language-Python%203.12-blue?style=for-the-badge&logo=python&logoColor=white" />
+  <img src="https://img.shields.io/badge/Hosted%20on-Streamlit%20Cloud-f97316?style=for-the-badge&logo=streamlit&logoColor=white" />
+  <img src="https://img.shields.io/badge/API-OpenWeatherMap-3b82f6?style=for-the-badge&logo=openweather&logoColor=white" />
+</p>
+
+<h1 align="center">🌍 Air & Water Quality Monitoring System</h1>
+
 🌍 Air & Water Quality Monitoring System
 
 A Machine Learning–powered monitoring and prediction system that evaluates environmental health through live air pollution values and city-based water drinkability predictions.
