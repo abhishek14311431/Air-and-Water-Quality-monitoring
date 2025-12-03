@@ -1,19 +1,17 @@
 import requests
-import json
+import os
 
-def load_api_key(service_name: str) -> str:
-    with open("api_keys.json", "r") as f:
-        keys = json.load(f)
-    return keys[service_name]
+API_KEY = os.getenv("AQI_API_KEY")
 
 def get_air_quality_for_city(city_name: str):
-    api_key = load_api_key("openweather_api_key")
-    
+    if not API_KEY:
+        raise Exception("API Key not found. Please add AQI_API_KEY in Streamlit Secrets.")
+
     geo_url = "https://api.openweathermap.org/geo/1.0/direct"
     geo_params = {
         "q": city_name,
         "limit": 1,
-        "appid": api_key
+        "appid": API_KEY
     }
 
     geo_resp = requests.get(geo_url, params=geo_params)
@@ -29,7 +27,7 @@ def get_air_quality_for_city(city_name: str):
     air_params = {
         "lat": lat,
         "lon": lon,
-        "appid": api_key
+        "appid": API_KEY
     }
 
     air_resp = requests.get(air_url, params=air_params)
@@ -43,6 +41,6 @@ def get_air_quality_for_city(city_name: str):
         "no2": comp["no2"],
         "so2": comp["so2"],
         "o3": comp["o3"],
-        "co": comp["co"]
+        "co": comp["co"],
     }
 
