@@ -2,7 +2,14 @@ import streamlit as st
 import numpy as np
 import joblib
 import pandas as pd
+import os
 from utils import get_air_quality_for_city
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+water_csv_path = os.path.join(BASE_DIR, "data", "water_quality_cities.csv")
+air_csv_path = os.path.join(BASE_DIR, "data", "air_quality_dataset.csv")
+
+df_water = pd.read_csv(water_csv_path)
 
 CITY_ALIASES = {
     "bangalore": "bengaluru",
@@ -16,11 +23,8 @@ st.set_page_config(
     layout="centered",
 )
 
-df_water = pd.read_csv("data/water_quality_cities.csv")
-
 st.markdown("""
 <style>
-
 html, body, [class*="css"] { font-size: 20px; }
 .stApp {
     background: linear-gradient(135deg, #4FACFE 0%, #00F2FE 100%);
@@ -60,9 +64,7 @@ html, body, [class*="css"] { font-size: 20px; }
     margin-top: 25px;
     color:white;
 }
-input, textarea, .stNumberInput, .stTextInput {
-    font-size: 22px !important;
-}
+input, textarea, .stNumberInput, .stTextInput { font-size: 22px !important; }
 div.stButton > button {
     font-size: 22px;
     padding: 12px 25px;
@@ -81,7 +83,7 @@ def map_water_label(x):
     return "Drinkable" if x == 1 else "Not Drinkable"
 
 def water_color(x):
-    return {"Drinkable":"#16A34A", "Not Drinkable":"#DC2626"}.get(x,"#1E3A8A")
+    return {"Drinkable":"#16A34A","Not Drinkable":"#DC2626"}.get(x,"#1E3A8A")
 
 st.markdown('<p class="title">🌍 Smart Air & Water Quality Monitoring</p>', unsafe_allow_html=True)
 
@@ -98,11 +100,10 @@ if st.button("Get Air Quality", use_container_width=True):
             city = CITY_ALIASES[c]
 
         data = get_air_quality_for_city(city)
-
         st.markdown(f"<h3>Live Pollutants in {city.title()}</h3>", unsafe_allow_html=True)
         st.write(data)
 
-        model = joblib.load("models/air_quality_model.pkl")
+        model = joblib.load(os.path.join(BASE_DIR,"models","air_quality_model.pkl"))
         X = np.array([[data[i] for i in data]])
         pred = model.predict(X)[0]
 
@@ -115,7 +116,7 @@ if st.button("Get Air Quality", use_container_width=True):
         )
 
     except Exception as e:
-        st.error(e)
+        st.error("Invalid City or API Error")
 
 st.markdown('</div>', unsafe_allow_html=True)
 
@@ -136,19 +137,14 @@ if st.button("Check Water Quality", use_container_width=True):
         st.error("City not found in water dataset")
     else:
         row = df_water[df_water["City"] == c2].iloc[0]
-
         ph = row["pH"]
         hardness = row["Hardness"]
         solids = row["Solids"]
 
         st.markdown("<h3>Measured Water Parameters</h3>", unsafe_allow_html=True)
-        st.write({
-            "pH": ph,
-            "Hardness": hardness,
-            "Solids": solids
-        })
+        st.write({"pH": ph, "Hardness": hardness, "Solids": solids})
 
-        model = joblib.load("models/water_quality_model.pkl")
+        model = joblib.load(os.path.join(BASE_DIR,"models","water_quality_model.pkl"))
         Xw = np.array([[ph, hardness, solids]])
         pred = model.predict(Xw)[0]
 
@@ -162,7 +158,6 @@ if st.button("Check Water Quality", use_container_width=True):
 
 st.markdown('</div>', unsafe_allow_html=True)
 
-st.write("")
 st.markdown(
     "<p style='text-align:center;color:white;font-weight:700;margin-top:25px;font-size:20px;'>Designed with ❤️ for Academic Project</p>",
     unsafe_allow_html=True
