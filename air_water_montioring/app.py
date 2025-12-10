@@ -1,4 +1,4 @@
-# 🚀 GDUI PREMIUM DASHBOARD — CLEAN, COMPACT, SIDE‑BY‑SIDE LAYOUT
+# 🚀 GDUI PREMIUM DASHBOARD — SOLAR SYSTEM EDITION
 # -------------------------------------------------------------------
 import streamlit as st
 import numpy as np
@@ -13,7 +13,7 @@ from utils import get_air_quality_for_city
 # ------------------ PATHS ------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 water_csv_path = os.path.join(BASE_DIR, "data", "water_quality_cities.csv")
-# Placeholder check for file existence (assuming you have created these files)
+# Placeholder check for file existence
 try:
     df_water = pd.read_csv(water_csv_path)
 except FileNotFoundError:
@@ -28,18 +28,20 @@ except Exception as e:
 CITY_ALIASES = {"bangalore":"bengaluru", "banglore":"bengaluru", "bombay":"mumbai"}
 
 # ------------------ PAGE CONFIG ------------------
-st.set_page_config(page_title="GDU Premium Dashboard - Universe Edition", page_icon="🌌", layout="wide")
+st.set_page_config(page_title="GDU Premium Dashboard - Solar System Edition", page_icon="🪐", layout="wide")
 
-# ------------------ DARK UNIVERSE / SOLAR SYSTEM THEME (REVISED) ------------------
+# =================================================================
+# 🪐 SOLAR SYSTEM / NEBULA THEME (REVISED BACKGROUND)
+# =================================================================
 st.markdown("""
 <style>
-/* 1. DARK UNIVERSE BACKGROUND */
+/* 1. SOLAR SYSTEM BACKGROUND (Deep space purple/blue nebula) */
 body {
-    background: #0d1117; /* Dark space background */
+    background: radial-gradient(circle at 10% 20%, rgba(0, 0, 0, 1) 0%, rgba(17, 24, 39, 1) 40%, rgba(30, 0, 50, 1) 100%);
     background-attachment: fixed;
     background-size: cover;
     overflow: auto;
-    color: #e6e6e6; /* Light text for contrast */
+    color: #f0f4f8; /* Light text for high contrast */
 }
 
 /* 2. GLOWING STARFIELD EFFECT */
@@ -52,32 +54,31 @@ body::before {
     height: 100%;
     /* Simple starfield via CSS gradient */
     background-image: 
-        radial-gradient(2px 2px at 20px 30px, #eee, rgba(0,0,0,0)),
-        radial-gradient(2px 2px at 40px 70px, #fff, rgba(0,0,0,0)),
-        radial-gradient(1px 1px at 90px 40px, #ddd, rgba(0,0,0,0)),
-        radial-gradient(2px 2px at 130px 100px, #eee, rgba(0,0,0,0)),
-        radial-gradient(1px 1px at 180px 50px, #fff, rgba(0,0,0,0));
+        radial-gradient(2px 2px at 20px 30px, #fff, rgba(0,0,0,0)),
+        radial-gradient(1px 1px at 70px 110px, #ffd700, rgba(0,0,0,0)), /* Sun-like star */
+        radial-gradient(2px 2px at 150px 50px, #eee, rgba(0,0,0,0)),
+        radial-gradient(1px 1px at 200px 90px, #fff, rgba(0,0,0,0));
     background-repeat: repeat;
     background-size: 200px 200px;
-    opacity: 0.7;
+    opacity: 0.8;
     z-index: -1;
 }
 
 /* 3. CARD STYLING - NEBULA EFFECT */
 .gdu-card {
-    background: rgba(30, 41, 59, 0.7); /* Darker, semi-transparent card */
+    background: rgba(30, 41, 59, 0.75); /* Darker, semi-transparent card */
     border-radius: 15px;
     padding: 20px;
-    box-shadow: 0 4px 15px rgba(0, 150, 255, 0.5); /* Blue/Nebula glow */
-    border: 1px solid rgba(0, 150, 255, 0.3);
+    box-shadow: 0 4px 20px rgba(255, 165, 0, 0.5); /* Orange/Sun glow */
+    border: 1px solid rgba(255, 165, 0, 0.3);
     margin-bottom: 20px;
 }
 
-/* 4. HEADERS - COSMIC GLOW */
+/* 4. HEADERS - SOLAR GLOW */
 .dashboard-title, .section-title, h2, h3, h4 {
-    color: #93c5fd; /* Light Blue for a cosmic feel */
-    text-shadow: 0 0 5px #0ea5e9; /* Subtle glow */
-    border-bottom: 2px solid #0ea5e9;
+    color: #ffcc66; /* Gold/Yellow for a solar feel */
+    text-shadow: 0 0 8px #ff9900; /* Subtle Sun glow */
+    border-bottom: 2px solid #ff9900;
     padding-bottom: 5px;
     margin-bottom: 15px;
 }
@@ -90,15 +91,15 @@ body::before {
 
 /* 5. INPUTS/BUTTONS */
 .stTextInput > div > div > input, .stButton > button {
-    background-color: #0f172a; /* Even darker input */
-    color: #e6e6e6;
-    border: 1px solid #0ea5e9;
+    background-color: #1f2937; /* Dark input */
+    color: #f0f4f8;
+    border: 1px solid #ff9900;
     border-radius: 8px;
 }
 
 .stButton > button:hover {
-    background-color: #0ea5e9; /* Button hover glow */
-    color: #0f172a;
+    background-color: #ff9900; /* Button hover glow */
+    color: #1f2937;
     transition: all 0.3s;
 }
 
@@ -107,30 +108,16 @@ body::before {
     padding: 10px 15px;
     margin: 5px;
     border-radius: 10px;
-    color: #0d1117; /* Dark text for readability on bright indicators */
+    color: #1f2937; /* Dark text for readability on bright indicators */
     font-weight: bold;
     display: inline-block;
 }
 
-/* Override Streamlit's default subheader color for the dark theme */
-h3 {
-    color: #93c5fd; 
-}
-
-/* Set the default color for all text in the main content */
-.stMarkdown {
-    color: #e6e6e6; 
-}
-
-/* Ensure the success/error messages are visible against the dark background */
-.stSuccess > div, .stError > div {
-    color: #0d1117;
-    font-weight: bold;
-}
-
-/* Remove unused planet elements */
+/* General text and cleanup */
+h3 { color: #ffcc66; } 
+.stMarkdown { color: #f0f4f8; } 
+.stSuccess > div, .stError > div { color: #1f2937; font-weight: bold; }
 #planet1, #planet2, #planet3 { display: none !important; }
-
 </style>
 """, unsafe_allow_html=True)
 
@@ -143,8 +130,7 @@ def map_water_label(x): return "Drinkable" if x==1 else "Not Drinkable"
 def water_color(x): return {"Drinkable":"#16A34A","Not Drinkable":"#DC2626"}[x]
 
 # ------------------ HEADER ------------------
-# Updated header emoji to reflect the theme
-st.markdown('<div class="dashboard-title">🌌 GDU Premium Air + Water Quality Dashboard</div>', unsafe_allow_html=True)
+st.markdown('<div class="dashboard-title">☀️ GDU Premium Air + Water Quality Dashboard</div>', unsafe_allow_html=True)
 
 # ================================================================
 # SIDE‑BY‑SIDE DASHBOARD LAYOUT
@@ -154,7 +140,7 @@ col_air, col_water = st.columns(2, gap="large")
 # ------------------ AIR QUALITY SECTION ------------------
 with col_air:
     st.markdown('<div class="gdu-card">', unsafe_allow_html=True)
-    st.subheader("🪐 Air Quality Analysis")
+    st.subheader("🛰️ Air Quality Analysis")
 
     # City input field for Air Quality
     city = st.text_input("City (Air Quality)", key="air_city_input")
@@ -167,9 +153,6 @@ with col_air:
             city_display = c.title()
 
             # Placeholder for the actual API call (assuming 'utils.get_air_quality_for_city' works)
-            # data = get_air_quality_for_city(c) 
-            
-            # Mock data for demonstration if utils is not available
             if 'get_air_quality_for_city' not in globals():
                  data = {"co": 45, "o3": 52, "no2": 35, "so2": 15}
             else:
@@ -200,7 +183,7 @@ with col_air:
 # ------------------ WATER QUALITY SECTION ------------------
 with col_water:
     st.markdown('<div class="gdu-card">', unsafe_allow_html=True)
-    st.subheader("💧 Water Quality Prediction")
+    st.subheader("🪐 Water Quality Prediction")
 
     # City input field for Water Quality
     city2 = st.text_input("City (Water Quality)", key="water_city_input")
@@ -237,7 +220,7 @@ with col_water:
 # =================================================================
 # AQI HISTORY TIMELINE
 # =================================================================
-st.markdown('<div class="section-title">📜 Cosmic AQI Timeline</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-title">📜 Lunar AQI Timeline</div>', unsafe_allow_html=True)
 st.markdown('<div class="gdu-card">', unsafe_allow_html=True)
 
 # Use the city entered in the main Air Quality section for context
@@ -249,8 +232,8 @@ if st.button(f"Show AQI Timeline for {hist_city.title()}", use_container_width=T
         timeline_hours = ["1 AM","3 AM","6 AM","9 AM","12 PM","3 PM","6 PM","9 PM","12 AM"]
         timeline_values = [42, 55, 48, 60, 70, 82, 95, 88, 65]
         df_hist = pd.DataFrame({"Time": timeline_hours, "AQI": timeline_values})
-        # Use an area chart with a vibrant color (e.g., #0ea5e9 for cosmic blue)
-        st.line_chart(df_hist.set_index("Time"), color="#0ea5e9") 
+        # Use an area chart with a vibrant solar color
+        st.line_chart(df_hist.set_index("Time"), color="#ff9900") 
     except Exception as e:
         st.error(f"TIMELINE ERROR → {e}")
 
@@ -258,7 +241,7 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 # =================================================================
 # CITY-WISE AQI COMPARISON (Detailed Report)
-st.markdown('<div class="section-title">☄️ Detailed City AQI Report</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-title">☄️ Detailed Planet Report</div>', unsafe_allow_html=True)
 st.markdown('<div class="gdu-card">', unsafe_allow_html=True)
 
 single_city = st.session_state.get('air_city_input', '')
@@ -272,7 +255,6 @@ if st.button("Get City AQI Details", key="details-btn", use_container_width=True
             city_display = c.title()
             
             # Placeholder for the actual API call
-            # data = get_air_quality_for_city(c)
             if 'get_air_quality_for_city' not in globals():
                  data = {"co": 45, "o3": 52, "no2": 35, "so2": 15}
             else:
@@ -326,13 +308,12 @@ if st.button("Compare Cities", key="compare-btn", use_container_width=True):
             for c in [c1, c2, c3]:
                 if c and c.strip() != "":
                     data = fetch(c)
-                    # The prediction is just a number (0, 1, or 2) representing the category
                     pred = aqi_model.predict([[*data.values()]])[0] 
-                    vals[c.title()] = pred # Store the numerical category for the bar chart
+                    vals[c.title()] = pred 
 
             if vals:
                 df_compare = pd.DataFrame({"City": list(vals.keys()), "AQI Score": list(vals.values())})
-                st.bar_chart(df_compare.set_index("City"), color="#5b21b6") # Deep purple cosmic color
+                st.bar_chart(df_compare.set_index("City"), color="#ff7f50") # Coral/Mars red
             else:
                 st.warning("Please enter at least two cities to compare.")
                 
@@ -344,22 +325,22 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 
 # INTERACTIVE HEATMAP FOR INDIA
-st.markdown('<div class="section-title">🗺️ Galactic AQI Bar Chart</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-title">🗺️ Solar AQI Bar Chart</div>', unsafe_allow_html=True)
 st.markdown('<div class="gdu-card">', unsafe_allow_html=True)
 
 try:
     # Bar Chart for different cities AQI
-    heat_cities = ["Alderaan","Coruscant","Tatooine","Krypton","Vulcan","Mars Colony"]
+    heat_cities = ["Mercury","Venus","Earth","Mars","Jupiter","Saturn"]
     # Random values for demonstration
     heat_values = np.random.randint(50,180,len(heat_cities)) 
     heat_df = pd.DataFrame({"City":heat_cities, "AQI":heat_values}).set_index("City")
     
-    # Use a bar chart to simulate a heatmap effect on a region
-    st.bar_chart(heat_df, color="#fde047") # Star/Sun yellow
+    # Use a bar chart with a yellow/gold color
+    st.bar_chart(heat_df, color="#ffd700") 
 except Exception as e:
     st.error(f"HEATMAP ERROR → {e}")
 
 st.markdown('</div>', unsafe_allow_html=True)
 
 # ------------------ FOOTER ------------------
-st.markdown("<p style='text-align:center;margin-top:25px;font-size:16px;color:#94a3b8;'>GDU Universe Dashboard ✨ | Built with Cosmic Dust and Streamlit ❤️</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center;margin-top:25px;font-size:16px;color:#f0f4f8;'>GDU Solar System Dashboard ✨ | Orbiting Data with Precision ❤️</p>", unsafe_allow_html=True)
