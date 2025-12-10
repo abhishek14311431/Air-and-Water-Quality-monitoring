@@ -166,12 +166,18 @@ body { transition:0.4s; }
 </style>
 <script>
 const body = window.parent.document.body;
-if ({mode} === 'light') {
-    body.className = 'main-bg light';
+
+// Force clear previous styles
+body.classList.remove('main-bg','light','dark');
+body.style.background = "";
+
+// Apply correct theme
+if ("{{mode}}" === "light") {
+    body.classList.add('main-bg','light');
     body.style.background = "linear-gradient(to bottom right, #dff1ff, #a8d8ff)";
 } else {
-    body.className = 'main-bg dark';
-    body.style.background = "linear-gradient(to bottom right, #0a0f1f, #111827)";
+    body.classList.add('main-bg','dark');
+    body.style.background = "radial-gradient(circle at top, #060b18, #0a1229)";
 }
 </script>
 """, unsafe_allow_html=True)
@@ -269,7 +275,7 @@ with col_water:
 st.markdown('<div class="section-title">📜 AQI History Timeline</div>', unsafe_allow_html=True)
 st.markdown('<div class="gdu-card">', unsafe_allow_html=True)
 
-hist_city = st.text_input("City for AQI History")
+hist_city = city
 
 if st.button("Show AQI Timeline", use_container_width=True):
     try:
@@ -287,7 +293,7 @@ st.markdown('</div>', unsafe_allow_html=True)
 st.markdown('<div class="section-title">🏙️ City-wise AQI Details</div>', unsafe_allow_html=True)
 st.markdown('<div class="gdu-card">', unsafe_allow_html=True)
 
-single_city = st.text_input("Enter City for Full AQI Details")
+single_city = city
 
 if st.button("Get City AQI Details", use_container_width=True):
     try:
@@ -341,7 +347,7 @@ st.markdown('</div>', unsafe_allow_html=True)
 st.markdown('<div class="section-title">⚡ Real-Time AQI Sparkline</div>', unsafe_allow_html=True)
 st.markdown('<div class="gdu-card">', unsafe_allow_html=True)
 
-spark_city = st.text_input("City for Real-Time Sparkline")
+spark_city = city
 if st.button("Show Sparkline", use_container_width=True):
     try:
         # simple synthetic real-time fluctuating data
