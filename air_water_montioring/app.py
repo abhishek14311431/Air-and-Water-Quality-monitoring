@@ -49,14 +49,6 @@ st.markdown(
             box-shadow: 0 6px 25px rgba(0,0,0,0.12);
             margin-bottom: 25px;
         }
-
-        .metric-box {
-            background: #f7f9fc;
-            padding: 18px;
-            border-radius: 10px;
-            text-align: center;
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.06);
-        }
     </style>
     """,
     unsafe_allow_html=True
@@ -83,25 +75,8 @@ CITY_ALIASES = {
 }
 
 
-# Utility functions
-def map_air(x):
-    return {0: "Good", 1: "Moderate", 2: "Poor"}.get(x)
-
-
-def map_water(x):
-    return "Drinkable" if x == 1 else "Not Drinkable"
-
-
-def color_icon(value, low, med, high):
-    if value <= low:
-        return "🟢"
-    elif value <= med:
-        return "🟡"
-    return "🔴"
-
-
 # =========================================================
-# 🌫️ AIR QUALITY SECTION
+# 🌫️ AIR QUALITY SECTION (Universal)
 # =========================================================
 st.markdown("<div class='section-title'>🌫️ Air Quality</div>", unsafe_allow_html=True)
 with st.container():
@@ -116,7 +91,7 @@ with st.container():
 
             st.subheader(f"Pollutant Levels in {c.title()}")
 
-            # Thresholds
+            # Safety thresholds
             limits = {
                 "pm2_5": (30, 60, 90),
                 "pm10": (50, 100, 150),
@@ -126,6 +101,13 @@ with st.container():
                 "co": (200, 400, 1000),
             }
 
+            def color_icon(value, low, med, high):
+                if value <= low:
+                    return "🟢"
+                elif value <= med:
+                    return "🟡"
+                return "🔴"
+
             cols = st.columns(3)
             for i, key in enumerate(air.keys()):
                 low, med, high = limits[key]
@@ -134,10 +116,10 @@ with st.container():
                 with cols[i % 3]:
                     st.metric(f"{icon} {key.upper()}", round(air[key], 2))
 
-            # Predict category
+            # Air category prediction
             model_a = joblib.load(os.path.join(BASE_DIR, "models", "air_quality_model.pkl"))
             pred_raw = model_a.predict([[*air.values()]])[0]
-            pred_label = map_air(pred_raw)
+            pred_label = {0: "Good", 1: "Moderate", 2: "Poor"}.get(pred_raw)
 
             st.subheader(f"Air Quality Category: {pred_label}")
 
@@ -155,7 +137,7 @@ with st.container():
 
 
 # =========================================================
-# 💧 WATER QUALITY SECTION (9 FEATURES)
+# 💧 WATER QUALITY SECTION (Universal for ANY CSV)
 # =========================================================
 st.markdown("<div class='section-title'>💧 Water Quality</div>", unsafe_allow_html=True)
 with st.container():
@@ -167,42 +149,53 @@ with st.container():
         try:
             c2 = CITY_ALIASES.get(city_water.lower().strip(), city_water).title()
 
-            if c2 not in df_water["City"].values:
+            if c2 not in df_water["City"].astype(str).values:
                 st.error("City not found in water dataset.")
             else:
-
                 row = df_water[df_water["City"] == c2].iloc[0]
+
+                # Normalize headers → ANY CSV works
+                row_dict = {col.lower().replace(" ", "_"): row[col] for col in df_water.columns}
 
                 st.subheader(f"Water Parameters — {c2}")
 
+                # Safe extraction of values
+                pH = row_dict.get("ph")
+                Hardness = row_dict.get("hardness")
+                Solids = row_dict.get("solids") or row_dict.get("tds")
+                Chloramines = row_dict.get("chloramines")
+                Sulfate = row_dict.get("sulfate")
+                Conductivity = row_dict.get("conductivity")
+                Organic_carbon = row_dict.get("organic_carbon") or row_dict.get("organiccarbon")
+                Trihalomethanes = row_dict.get("trihalomethanes") or row_dict.get("trihalo_methanes")
+                Turbidity = row_dict.get("turbidity")
+
                 features = [
-                    ("pH", row["pH"]),
-                    ("Hardness", row["Hardness"]),
-                    ("Solids", row["Solids"]),
-                    ("Chloramines", row["Chloramines"]),
-                    ("Sulfate", row["Sulfate"]),
-                    ("Conductivity", row["Conductivity"]),
-                    ("Organic Carbon", row["Organic_carbon"]),
-                    ("Trihalomethanes", row["Trihalomethanes"]),
-                    ("Turbidity", row["Turbidity"]),
+                    ("pH", pH),
+                    ("Hardness", Hardness),
+                    ("Solids", Solids),
+                    ("Chloramines", Chloramines),
+                    ("Sulfate", Sulfate),
+                    ("Conductivity", Conductivity),
+                    ("Organic Carbon", Organic_carbon),
+                    ("Trihalomethanes", Trihalomethanes),
+                    ("Turbidity", Turbidity),
                 ]
 
                 cols = st.columns(3)
                 for i, (name, value) in enumerate(features):
                     cols[i % 3].metric(name, round(value, 2))
 
-                # Load model
+                # Full 9-feature prediction
                 model_w = joblib.load(os.path.join(BASE_DIR, "models", "water_quality_model.pkl"))
-
-                # Predict using ALL 9 features
                 X_input = [[
-                    row["pH"], row["Hardness"], row["Solids"],
-                    row["Chloramines"], row["Sulfate"], row["Conductivity"],
-                    row["Organic_carbon"], row["Trihalomethanes"], row["Turbidity"]
+                    pH, Hardness, Solids,
+                    Chloramines, Sulfate, Conductivity,
+                    Organic_carbon, Trihalomethanes, Turbidity
                 ]]
 
                 pred_raw = model_w.predict(X_input)[0]
-                pred_label = map_water(pred_raw)
+                pred_label = "Drinkable" if pred_raw == 1 else "Not Drinkable"
 
                 st.subheader(f"Water Quality: {pred_label}")
 
@@ -218,7 +211,7 @@ with st.container():
 
 
 # =========================================================
-# 📊 CITY COMPARISON (PM2.5 PIE CHART)
+# 📊 CITY COMPARISON PIE CHART
 # =========================================================
 st.markdown("<div class='section-title'>📊 Compare PM2.5 Across Cities</div>", unsafe_allow_html=True)
 with st.container():
