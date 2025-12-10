@@ -167,16 +167,15 @@ body { transition:0.4s; }
 <script>
 const body = window.parent.document.body;
 
-// Force clear previous styles
-body.classList.remove('main-bg','light','dark');
-body.style.background = "";
+// Reset all classes
+body.classList.remove('light','dark','main-bg');
 
 // Apply correct theme
 if ("{{mode}}" === "light") {
-    body.classList.add('main-bg','light');
+    body.classList.add('light','main-bg');
     body.style.background = "linear-gradient(to bottom right, #dff1ff, #a8d8ff)";
 } else {
-    body.classList.add('main-bg','dark');
+    body.classList.add('dark','main-bg');
     body.style.background = "radial-gradient(circle at top, #060b18, #0a1229)";
 }
 </script>
