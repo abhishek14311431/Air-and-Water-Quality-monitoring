@@ -167,3 +167,4 @@ df_heat = pd.DataFrame({"City": heat_cities, "AQI": heat_values}).set_index("Cit
 st.bar_chart(df_heat)
 
 st.markdown('</div>', unsafe_allow_html=True)
+
