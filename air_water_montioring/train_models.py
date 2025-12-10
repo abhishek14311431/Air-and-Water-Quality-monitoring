@@ -4,100 +4,87 @@ from sklearn.ensemble import RandomForestClassifier
 import joblib
 import os
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.path.join(BASE_DIR, "data")
-MODEL_DIR = os.path.join(BASE_DIR, "models")
 
-
-# ==========================================================
-#  TRAIN AIR QUALITY MODEL  (6 pollutant features)
-# ==========================================================
+# ==============================
+# Train AIR model
+# ==============================
 def train_air_quality_model():
-    print("\n==============================")
-    print("📌 TRAINING AIR QUALITY MODEL")
-    print("==============================")
+    df = pd.read_csv("data/air_quality_dataset.csv")
 
-    air_path = os.path.join(DATA_DIR, "air_quality_dataset.csv")
-    df = pd.read_csv(air_path)
+    X = df[["pm2_5", "pm10", "no2", "so2", "o3", "co"]]
+    y = df["label"]
 
-    # Keep only pollutant columns
-    FEATURES = ["pm2_5", "pm10", "no2", "so2", "o3", "co"]
-    LABEL = "label"
-
-    X = df[FEATURES]
-    y = df[LABEL]
-
-    # Split data
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=42
     )
 
-    # Train model
-    model = RandomForestClassifier(
-        n_estimators=160, max_depth=None, random_state=42
-    )
+    model = RandomForestClassifier(n_estimators=200, random_state=42)
     model.fit(X_train, y_train)
 
-    # Evaluate
     accuracy = model.score(X_test, y_test)
-    print(f"✅ Air Model Accuracy: {accuracy:.4f}")
+    print("Air Quality Model Accuracy:", accuracy)
 
-    # Save model
-    model_path = os.path.join(MODEL_DIR, "air_quality_model.pkl")
-    joblib.dump(model, model_path)
-    print(f"💾 Saved: {model_path}")
+    joblib.dump(model, "models/air_quality_model.pkl")
 
 
-# ==========================================================
-#  TRAIN WATER QUALITY MODEL (ALL 9 FEATURES)
-# ==========================================================
+# ==============================
+# Train WATER model (9 FEATURES)
+# ==============================
 def train_water_quality_model():
-    print("\n==============================")
-    print("💧 TRAINING WATER QUALITY MODEL")
-    print("==============================")
+    df = pd.read_csv("data/water_quality_cities.csv")
 
-    water_path = os.path.join(DATA_DIR, "water_quality_cities.csv")
-    df = pd.read_csv(water_path)
+    # Normalize column names → lower_snake_case
+    df.columns = df.columns.str.lower().str.replace(" ", "_")
 
-    # Remove non-numeric column
-    df = df.drop(columns=["City"], errors="ignore")
+    # Expected columns (9 features)
+    required = [
+        "ph",
+        "hardness",
+        "solids",
+        "chloramines",
+        "sulfate",
+        "conductivity",
+        "organic_carbon",
+        "trihalomethanes",
+        "turbidity",
+    ]
 
-    # Target
-    TARGET = "Potability"
+    # Fix missing column names from dataset variants
+    rename_map = {
+        "trihalo_methanes": "trihalomethanes",
+        "organiccarbon": "organic_carbon",
+        "tds": "solids",
+    }
 
-    # Features = everything except target
-    X = df.drop(columns=[TARGET])
-    y = df[TARGET]
+    df.rename(columns=rename_map, inplace=True)
 
-    # Fill missing values automatically
+    # Check all columns exist
+    for col in required:
+        if col not in df.columns:
+            raise ValueError(f"Missing column in dataset: {col}")
+
+    # Feature & Target
+    X = df[required]
+    y = df["potability"]
+
+    # Fill missing values
     X = X.fillna(X.mean())
 
-    # Split
+    # Train-test split
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=42
     )
 
     # Train model
-    model = RandomForestClassifier(
-        n_estimators=200, max_depth=None, random_state=42
-    )
+    model = RandomForestClassifier(n_estimators=300, random_state=42)
     model.fit(X_train, y_train)
 
-    # Evaluate
     accuracy = model.score(X_test, y_test)
-    print(f"✅ Water Model Accuracy: {accuracy:.4f}")
+    print("Water Quality Model Accuracy:", accuracy)
 
-    # Save model
-    model_path = os.path.join(MODEL_DIR, "water_quality_model.pkl")
-    joblib.dump(model, model_path)
-    print(f"💾 Saved: {model_path}")
+    joblib.dump(model, "models/water_quality_model.pkl")
 
 
-# ==========================================================
-#  MAIN EXECUTION (TRAIN BOTH MODELS)
-# ==========================================================
 if __name__ == "__main__":
-    print("🚀 Starting Training Process...")
     train_air_quality_model()
     train_water_quality_model()
-    print("\n🎉 ALL MODELS TRAINED SUCCESSFULLY!")
