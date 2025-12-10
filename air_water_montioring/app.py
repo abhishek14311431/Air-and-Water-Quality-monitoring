@@ -56,13 +56,26 @@ st.markdown("""
 }
 
 .indicator {
-    border-radius: 10px;
-    padding: 10px;
-    margin: 5px 0;
-    text-align: center;
-    font-size: 18px;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 15px auto;
+    font-size: 20px;
     font-weight: 700;
-    background: rgba(255, 255, 255, 0.45);
+    color: #00eaff;
+    background: rgba(0, 0, 0, 0.35);
+    border: 4px solid #00eaff;
+    box-shadow: 0 0 15px #00eaff, 0 0 30px #00eaff, inset 0 0 20px #00eaff;
+    animation: neonPulse 2s infinite ease-in-out;
+}
+
+@keyframes neonPulse {
+    0% { box-shadow: 0 0 10px #00eaff, 0 0 20px #00eaff, inset 0 0 10px #00eaff; }
+    50% { box-shadow: 0 0 20px #00eaff, 0 0 40px #00eaff, inset 0 0 20px #00eaff; }
+    100% { box-shadow: 0 0 10px #00eaff, 0 0 20px #00eaff, inset 0 0 10px #00eaff; }
 }
 </style>
 
@@ -159,6 +172,39 @@ try:
     st.bar_chart(heat_df)
 except Exception as e:
     st.error(f"HEATMAP ERROR → {e}")
+
+st.markdown('</div>', unsafe_allow_html=True)
+
+# ========================= CITY COMPARISON (ADDED) =========================
+st.markdown('<div class="section-title">📊 Compare AQI Between Cities</div>', unsafe_allow_html=True)
+st.markdown('<div class="gdu-card">', unsafe_allow_html=True)
+
+city_a = st.text_input("City A")
+city_b = st.text_input("City B")
+city_c = st.text_input("City C (optional)")
+
+if st.button("Compare City AQI", use_container_width=True):
+    try:
+        def fetch(city):
+            city = CITY_ALIASES.get(city.lower().strip(), city)
+            return get_air_quality_for_city(city)
+
+        vals = {}
+        for c in [city_a, city_b, city_c]:
+            if c and c.strip() != "":
+                data = fetch(c)
+                model = joblib.load(os.path.join(BASE_DIR, "models", "air_quality_model.pkl"))
+                pred = model.predict([[*data.values()]])[0]
+                vals[c.title()] = pred
+
+        if vals:
+            df_compare = pd.DataFrame({"City": list(vals.keys()), "AQI": list(vals.values())}).set_index("City")
+            st.bar_chart(df_compare)
+        else:
+            st.warning("Enter at least 2 cities to compare.")
+
+    except Exception as e:
+        st.error(f"COMPARISON ERROR → {e}")
 
 st.markdown('</div>', unsafe_allow_html=True)
 
