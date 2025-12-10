@@ -18,144 +18,104 @@ CITY_ALIASES = {"bangalore":"bengaluru", "banglore":"bengaluru", "bombay":"mumba
 # ------------------ PAGE CONFIG ------------------
 st.set_page_config(page_title="GDU Premium Dashboard", page_icon="🌍", layout="wide")
 
-# ------------------ NIGHT MODE ------------------
-if "dark" not in st.session_state:
-    st.session_state.dark = False
+# ------------------ REMOVE NIGHT MODE — ALWAYS ENABLE SPACE THEME
+# Force space galaxy theme as default
 
-st.session_state.dark = st.toggle("🌙 Night Mode", value=st.session_state.dark)
-mode = "dark" if st.session_state.dark else "light"
-
-# ------------------ PREMIUM GDU CSS ------------------
 st.markdown("""
 <style>
-body { transition:0.4s; }
-
-/* ---------- LIGHT MODE ---------- */
-.light .main-bg {
-    background: linear-gradient(to bottom right, #dff1ff, #a8d8ff);
-    color:#1e293b;
+body {
+    background: radial-gradient(circle at top, #05080f, #0b1224);
+    background-attachment: fixed;
+    background-size: 200% 200%;
+    animation: parallaxMove 18s ease infinite;
+    overflow: hidden;
+    color: white;
 }
 
-/* ---------- DARK MODE ---------- */
-.dark .main-bg {
-    background: radial-gradient(circle at top, #060b18, #0a1229);
-    color:white;
-    position: relative;
-    overflow:hidden;
-}
-
-/* NEON BORDERS FOR CARDS IN NIGHT MODE */
-.dark .gdu-card {
-    border: 2px solid #00eaff;
-    box-shadow: 0 0 18px #00eaff;
-}
-
-/* ANIMATED STARFIELD */
-.dark .main-bg::before,
-.dark .main-bg::after {
+/* STARFIELD LAYER 1 */
+body::before {
     content: "";
-    position: absolute;
+    position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
     background-repeat: repeat;
-    pointer-events: none;
-    z-index: -1;
+    background-image:
+      radial-gradient(2px 2px at 20px 20px, #ffffff, transparent),
+      radial-gradient(2px 2px at 50px 80px, #ffffff, transparent),
+      radial-gradient(2px 2px at 90px 40px, #ffffff, transparent),
+      radial-gradient(2px 2px at 140px 120px, #ffffff, transparent),
+      radial-gradient(2px 2px at 200px 200px, #ffffff, transparent);
+    animation: starDrift 20s linear infinite;
+    opacity: 0.65;
+    pointer-events:none;
+    z-index:-3;
 }
 
-.dark .main-bg::before {
-    background-image: radial-gradient(2px 2px at 20px 20px, #ffffff, transparent),
-                      radial-gradient(2px 2px at 50px 80px, #ffffff, transparent),
-                      radial-gradient(2px 2px at 90px 40px, #ffffff, transparent),
-                      radial-gradient(2px 2px at 140px 120px, #ffffff, transparent),
-                      radial-gradient(2px 2px at 200px 200px, #ffffff, transparent);
-    animation: stars 12s linear infinite;
-    opacity: 0.7;
+/* STARFIELD LAYER 2 */
+body::after {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-repeat: repeat;
+    background-image:
+      radial-gradient(1px 1px at 30px 60px, #a3eaff, transparent),
+      radial-gradient(1px 1px at 120px 200px, #a3eaff, transparent),
+      radial-gradient(1px 1px at 300px 150px, #a3eaff, transparent),
+      radial-gradient(1px 1px at 400px 40px, #a3eaff, transparent);
+    animation: starDrift2 35s linear infinite;
+    opacity: 0.45;
+    pointer-events:none;
+    z-index:-2;
 }
 
-.dark .main-bg::after {
-    background-image: radial-gradient(1px 1px at 30px 60px, #a3eaff, transparent),
-                      radial-gradient(1px 1px at 120px 200px, #a3eaff, transparent),
-                      radial-gradient(1px 1px at 300px 150px, #a3eaff, transparent),
-                      radial-gradient(1px 1px at 400px 40px, #a3eaff, transparent);
-    animation: stars 20s linear infinite;
-    opacity: 0.5;
-}
-
-@keyframes stars {
-    from { transform: translateY(0px); }
-    to   { transform: translateY(-200px); }
-}
-
-/* Cards */
-.gdu-card {
-    background: rgba(255,255,255,0.12);
-    border-radius:18px;
-    padding:22px;
-    backdrop-filter: blur(12px);
-    animation: fadeIn .7s ease;
-}
-
-@keyframes fadeIn {
-    from { opacity:0; transform:translateY(10px); }
-    to   { opacity:1; transform:translateY(0); }
-}
-
-.indicator {
-    border-radius:12px;
-    padding:12px;
-    margin:6px 0;
-    text-align:center;
-    font-size:20px;
-    font-weight:700;
-    animation:pulse 1.6s infinite;
-}
-
-@keyframes pulse {
-    0% { transform:scale(1); }
-    50% { transform:scale(1.05); }
-    100% { transform:scale(1); }
-}
-/* NEON GLOW TEXT */
-.neon-text {
-    font-size: 36px;
-    font-weight: 900;
-    color: #00eaff;
-    text-shadow: 0 0 8px #00eaff, 0 0 16px #00eaff, 0 0 32px #00eaff;
-}
-
-/* FLOATING PARTICLES */
-.dark .main-bg::before {
-    animation: stars 12s linear infinite, floatParticles 8s ease-in-out infinite;
-}
-
-@keyframes floatParticles {
-    0% { transform: translateY(0) translateX(0); }
-    50% { transform: translateY(-20px) translateX(10px); }
-    100% { transform: translateY(0) translateX(0); }
-}
-
-/* CIRCULAR AQI GAUGE */
-.aqi-gauge {
-    width: 140px;
-    height: 140px;
+/* FLOATING PLANETS */
+.planet {
+    position: fixed;
     border-radius: 50%;
-    border: 10px solid;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 26px;
-    font-weight: 900;
-    margin: 10px auto;
-    animation: pulse 2s infinite;
+    filter: blur(0.5px);
+    animation: floatPlanet 12s ease-in-out infinite;
+    z-index:-1;
 }
 
-/* PARALLAX BACKGROUND */
-.dark .main-bg {
-    background-attachment: fixed;
-    background-size: 200% 200%;
-    animation: parallaxMove 15s ease infinite;
+#planet1 {
+    width: 120px;
+    height: 120px;
+    background: radial-gradient(circle at 30% 30%, #ff9f43, #d35400);
+    top: 12%; left: 8%;
+}
+#planet2 {
+    width: 180px;
+    height: 180px;
+    background: radial-gradient(circle at 20% 20%, #74b9ff, #0984e3);
+    top: 70%; left: 70%;
+}
+#planet3 {
+    width: 80px;
+    height: 80px;
+    background: radial-gradient(circle at 20% 20%, #a29bfe, #6c5ce7);
+    top: 50%; left: 20%;
+    animation-duration: 16s;
+}
+
+@keyframes floatPlanet {
+    0% { transform: translateY(0px) translateX(0px); }
+    50% { transform: translateY(-25px) translateX(12px); }
+    100% { transform: translateY(0px) translateX(0px); }
+}
+
+@keyframes starDrift {
+    0% { transform: translateY(0px); }
+    100% { transform: translateY(-300px); }
+}
+
+@keyframes starDrift2 {
+    0% { transform: translateY(0px); }
+    100% { transform: translateY(-180px); }
 }
 
 @keyframes parallaxMove {
@@ -163,22 +123,13 @@ body { transition:0.4s; }
     50% { background-position: 100% 100%; }
     100% { background-position: 0% 0%; }
 }
+
 </style>
-<script>
-const body = window.parent.document.body;
 
-// Reset all classes
-body.classList.remove('light','dark','main-bg');
+<div id="planet1" class="planet"></div>
+<div id="planet2" class="planet"></div>
+<div id="planet3" class="planet"></div>
 
-// Apply correct theme
-if ("{{mode}}" === "light") {
-    body.classList.add('light','main-bg');
-    body.style.background = "linear-gradient(to bottom right, #dff1ff, #a8d8ff)";
-} else {
-    body.classList.add('dark','main-bg');
-    body.style.background = "radial-gradient(circle at top, #060b18, #0a1229)";
-}
-</script>
 """, unsafe_allow_html=True)
 
 # ------------------ HELPERS ------------------
