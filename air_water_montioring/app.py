@@ -6,18 +6,27 @@ import plotly.express as px
 import os
 from utils import get_air_quality_for_city
 
-# ---------------- PAGE CONFIG ----------------
+
+# ---------------------------------------
+# PAGE CONFIG
+# ---------------------------------------
 st.set_page_config(
-    page_title="Air & Water Monitoring",
+    page_title="Air & Water Quality Monitoring",
     page_icon="🌍",
-    layout="wide",
+    layout="wide"
 )
 
-# ---------------- HEADER ----------------
-st.title("🌍 Air & Water Quality Monitoring Dashboard")
-st.write("Real-time pollutant monitoring with predictions and color-coded safety indicators.")
 
-# ---------------- PATHS ----------------
+# ---------------------------------------
+# HEADER
+# ---------------------------------------
+st.title("🌍 Air & Water Quality Monitoring Dashboard")
+st.write("Real-time pollutant monitoring + predictions with color-coded safety indicators.")
+
+
+# ---------------------------------------
+# LOAD DATA
+# ---------------------------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 water_csv_path = os.path.join(BASE_DIR, "data", "water_quality_cities.csv")
 df_water = pd.read_csv(water_csv_path)
@@ -25,17 +34,23 @@ df_water = pd.read_csv(water_csv_path)
 CITY_ALIASES = {
     "bangalore": "bengaluru",
     "banglore": "bengaluru",
-    "bombay": "mumbai"
+    "bombay": "mumbai",
 }
 
+
+# ---------------------------------------
+# HELPER FUNCTIONS
+# ---------------------------------------
 def map_air_label(x):
     return {0: "Good", 1: "Moderate", 2: "Poor"}.get(x)
+
 
 def map_water_label(x):
     return "Drinkable" if x == 1 else "Not Drinkable"
 
-# ---------------- COLOR RULES ----------------
+
 def get_color_icon(val, low, med, high):
+    """Returns 🟢 🟡 🔴 based on pollutant severity."""
     if val <= low:
         return "🟢"
     elif val <= med:
@@ -44,12 +59,12 @@ def get_color_icon(val, low, med, high):
         return "🔴"
 
 
-# ---------------------------------------------------------
+# ============================================================
 # 🌫️ AIR QUALITY SECTION
-# ---------------------------------------------------------
+# ============================================================
 st.header("🌫️ Air Quality")
 
-city = st.text_input("Enter a city for Air Quality")
+city = st.text_input("Enter a City for Air Quality")
 
 if st.button("Fetch Air Quality", type="primary"):
     try:
@@ -70,35 +85,39 @@ if st.button("Fetch Air Quality", type="primary"):
             "co": (200, 400, 1000),
         }
 
-        # Display metrics
+        # Display pollutant metrics with color
         for i, (name, value) in enumerate(items):
             low, med, high = pollutant_limits[name]
-            color_icon = get_color_icon(value, low, med, high)
-            cols[i % 3].metric(f"{color_icon} {name.upper()}", value)
+            icon = get_color_icon(value, low, med, high)
 
-        # Prediction
+            cols[i % 3].metric(
+                label=f"{icon} {name.upper()}",
+                value=value
+            )
+
+        # Prediction Model
         model = joblib.load(os.path.join(BASE_DIR, "models", "air_quality_model.pkl"))
         pred_label = map_air_label(model.predict([[*data.values()]])[0])
 
         st.subheader(f"Air Quality Category: {pred_label}")
 
         if pred_label == "Good":
-            st.success("🌿 Air quality is GOOD. Safe to go outside!")
+            st.success("🌿 Air quality is GOOD. Feel free to go outside.")
         elif pred_label == "Moderate":
-            st.warning("😷 MODERATE air. Sensitive groups should wear masks.")
+            st.warning("😷 AIR IS MODERATE. Sensitive groups should wear a mask.")
         else:
-            st.error("🚨 POOR air quality — Wear a mask!")
+            st.error("🚨 AIR IS POOR. Wear a mask and avoid long exposure.")
 
     except Exception as e:
         st.error(str(e))
 
 
-# ---------------------------------------------------------
+# ============================================================
 # 💧 WATER QUALITY SECTION
-# ---------------------------------------------------------
+# ============================================================
 st.header("💧 Water Quality")
 
-city2 = st.text_input("Enter a city for Water Quality")
+city2 = st.text_input("Enter a City for Water Quality")
 
 if st.button("Fetch Water Quality", type="secondary"):
     try:
@@ -110,24 +129,25 @@ if st.button("Fetch Water Quality", type="secondary"):
             row = df_water[df_water["City"] == city2_fixed].iloc[0]
             ph, hardness, solids = row["pH"], row["Hardness"], row["Solids"]
 
-            st.subheader(f"Parameters — {city2_fixed}")
+            st.subheader(f"Water Parameters — {city2_fixed}")
 
-            colw = st.columns(3)
+            cols = st.columns(3)
 
             water_limits = {
                 "pH": (6.5, 8.5, 9.5),
                 "Hardness": (150, 300, 500),
-                "Solids": (300, 600, 900)
+                "Solids": (300, 600, 900),
             }
 
             params = [("pH", ph), ("Hardness", hardness), ("Solids", solids)]
 
             for i, (name, value) in enumerate(params):
                 low, med, high = water_limits[name]
-                color_icon = get_color_icon(value, low, med, high)
-                colw[i].metric(f"{color_icon} {name}", value)
+                icon = get_color_icon(value, low, med, high)
 
-            # Prediction
+                cols[i].metric(f"{icon} {name}", value)
+
+            # Water quality model
             model = joblib.load(os.path.join(BASE_DIR, "models", "water_quality_model.pkl"))
             pred = map_water_label(model.predict([[ph, hardness, solids]])[0])
 
@@ -136,45 +156,50 @@ if st.button("Fetch Water Quality", type="secondary"):
             if pred == "Drinkable":
                 st.success("💧 Water is safe for drinking.")
             else:
-                st.error("🚱 Water is NOT safe for drinking.")
+                st.error("🚱 Water is NOT safe. Use filtered or bottled water.")
 
     except Exception as e:
         st.error(str(e))
 
 
-# ---------------------------------------------------------
+# ============================================================
 # 📊 CITY COMPARISON — PIE CHART
-# ---------------------------------------------------------
-st.header("📊 Compare AQI Between Cities")
+# ============================================================
+st.header("📊 Compare AQI Between Cities (PM2.5 Based)")
 
-ci1 = st.text_input("City 1")
-ci2 = st.text_input("City 2")
-ci3 = st.text_input("City 3 (optional)")
+c1 = st.text_input("City 1")
+c2 = st.text_input("City 2")
+c3 = st.text_input("City 3 (Optional)")
 
 if st.button("Compare AQI"):
     try:
-        cities = [ci1, ci2, ci3]
-        values = []
+        cities = [c1, c2, c3]
         labels = []
+        values = []
 
-        model = joblib.load(os.path.join(BASE_DIR, "models", "air_quality_model.pkl"))
-
-        for c in cities:
-            if c.strip():
-                cname = CITY_ALIASES.get(c.lower().strip(), c)
-                data = get_air_quality_for_city(cname)
-                pred = model.predict([[*data.values()]])[0]
+        for city in cities:
+            if city.strip():
+                cname = CITY_ALIASES.get(city.lower().strip(), city)
+                pollution = get_air_quality_for_city(cname)
+                pm25 = pollution["pm2_5"]
 
                 labels.append(cname.title())
-                values.append(pred)
+                values.append(pm25)
 
-        if values:
-            df = pd.DataFrame({"City": labels, "AQI": values})
-            fig = px.pie(df, names="City", values="AQI", title="AQI Comparison")
-            st.plotly_chart(fig)
-
-        else:
+        if len(values) == 0:
             st.warning("Enter at least 1 valid city.")
+        else:
+            df = pd.DataFrame({"City": labels, "PM2.5": values})
+
+            fig = px.pie(
+                df,
+                names="City",
+                values="PM2.5",
+                title="PM2.5 Pollution Comparison (Lower is Better)",
+                color="City"
+            )
+
+            st.plotly_chart(fig)
 
     except Exception as e:
         st.error(str(e))
