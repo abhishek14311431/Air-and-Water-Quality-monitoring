@@ -120,6 +120,27 @@ def water_color(x): return {"Drinkable": "#16A34A", "Not Drinkable": "#DC2626"}.
 st.markdown('<p class="sub">🌬️ Air Quality Check</p>', unsafe_allow_html=True)
 st.markdown('<div class="card">', unsafe_allow_html=True)
 
+# Tomorrow Air Quality Prediction
+st.markdown("<h3>Predict Tomorrow's Air Quality</h3>", unsafe_allow_html=True)
+today = st.number_input("Today's AQI", min_value=0.0)
+yesterday = st.number_input("Yesterday's AQI", min_value=0.0)
+
+if st.button("Predict Tomorrow AQI", use_container_width=True):
+    tomorrow_aqi = (today * 0.6) + (yesterday * 0.4)
+    # Line graph data
+    import plotly.graph_objects as go
+    fig_aqi = go.Figure()
+    fig_aqi.add_trace(go.Scatter(x=["Yesterday", "Today", "Tomorrow"], y=[yesterday, today, tomorrow_aqi], mode='lines+markers'))
+    st.plotly_chart(fig_aqi, use_container_width=True)
+    # Advice
+    if tomorrow_aqi > 150:
+        st.error("⚠️ High Pollution! Wearing a mask is compulsory.")
+    elif tomorrow_aqi > 100:
+        st.warning("😷 Moderate Pollution. Mask recommended.")
+    else:
+        st.success("🌱 Air quality is good! No mask needed.")
+    st.success(f"Predicted Tomorrow AQI: {round(tomorrow_aqi,2)}")
+
 city = st.text_input("Enter City (Air Quality)")
 
 if st.button("Get Air Quality", use_container_width=True):
@@ -130,7 +151,11 @@ if st.button("Get Air Quality", use_container_width=True):
 
         data = get_air_quality_for_city(city)
         st.markdown(f"<h3>Live Pollutants in {city.title()}</h3>", unsafe_allow_html=True)
-        st.write(data)
+        import plotly.express as px
+        # Convert data to DataFrame for graph
+        df_plot = pd.DataFrame({"Pollutant": list(data.keys()), "Value": list(data.values())})
+        fig = px.bar(df_plot, x="Pollutant", y="Value", title=f"Pollutant Levels in {city.title()}", height=400)
+        st.plotly_chart(fig, use_container_width=True)
 
         model = joblib.load(os.path.join(BASE_DIR, "models", "air_quality_model.pkl"))
         X = np.array([[data[i] for i in data]])
