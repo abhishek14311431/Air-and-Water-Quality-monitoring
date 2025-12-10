@@ -4,7 +4,6 @@ from sklearn.ensemble import RandomForestClassifier
 import joblib
 import os
 
-
 # ==============================
 # Train AIR model
 # ==============================
@@ -18,7 +17,7 @@ def train_air_quality_model():
         X, y, test_size=0.2, random_state=42
     )
 
-    model = RandomForestClassifier(n_estimators=200, random_state=42)
+    model = RandomForestClassifier(n_estimators=150, random_state=42)
     model.fit(X_train, y_train)
 
     accuracy = model.score(X_test, y_test)
@@ -28,55 +27,36 @@ def train_air_quality_model():
 
 
 # ==============================
-# Train WATER model (9 FEATURES)
+# Train WATER model (ONLY 3 features)
 # ==============================
 def train_water_quality_model():
     df = pd.read_csv("data/water_quality_cities.csv")
 
-    # Normalize column names → lower_snake_case
+    # Normalize column names
     df.columns = df.columns.str.lower().str.replace(" ", "_")
 
-    # Expected columns (9 features)
-    required = [
-        "ph",
-        "hardness",
-        "solids",
-        "chloramines",
-        "sulfate",
-        "conductivity",
-        "organic_carbon",
-        "trihalomethanes",
-        "turbidity",
-    ]
+    # Fix alternative column names
+    df.rename(columns={"tds": "solids"}, inplace=True)
 
-    # Fix missing column names from dataset variants
-    rename_map = {
-        "trihalo_methanes": "trihalomethanes",
-        "organiccarbon": "organic_carbon",
-        "tds": "solids",
-    }
+    # Use ONLY these 3 features
+    required = ["ph", "hardness", "solids"]
 
-    df.rename(columns=rename_map, inplace=True)
-
-    # Check all columns exist
+    # Check all required columns exist
     for col in required:
         if col not in df.columns:
-            raise ValueError(f"Missing column in dataset: {col}")
+            raise Exception(f"Missing column in dataset: {col}")
 
-    # Feature & Target
     X = df[required]
     y = df["potability"]
 
     # Fill missing values
     X = X.fillna(X.mean())
 
-    # Train-test split
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=42
     )
 
-    # Train model
-    model = RandomForestClassifier(n_estimators=300, random_state=42)
+    model = RandomForestClassifier(n_estimators=200, random_state=42)
     model.fit(X_train, y_train)
 
     accuracy = model.score(X_test, y_test)
@@ -85,6 +65,9 @@ def train_water_quality_model():
     joblib.dump(model, "models/water_quality_model.pkl")
 
 
+# ==============================
+# MAIN EXECUTION
+# ==============================
 if __name__ == "__main__":
     train_air_quality_model()
     train_water_quality_model()
