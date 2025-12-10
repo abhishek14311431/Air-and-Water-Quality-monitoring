@@ -284,8 +284,32 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 # =================================================================
 # CITY-WISE AQI COMPARISON
-# =================================================================
-st.markdown('<div class="section-title">🏙️ City-wise AQI Comparison</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-title">🏙️ City-wise AQI Details</div>', unsafe_allow_html=True)
+st.markdown('<div class="gdu-card">', unsafe_allow_html=True)
+
+single_city = st.text_input("Enter City for Full AQI Details")
+
+if st.button("Get City AQI Details", use_container_width=True):
+    try:
+        c = CITY_ALIASES.get(single_city.lower().strip(), single_city)
+        data = get_air_quality_for_city(c)
+
+        st.markdown(f"<h4 style='text-align:center;'>🌍 Full AQI Report — {c.title()}</h4>", unsafe_allow_html=True)
+
+        # Show pollutant indicators
+        for k, v in data.items():
+            st.markdown(f"<div class='indicator' style='background:{pollutant_color(v)}'>{k.upper()}: {v}</div>", unsafe_allow_html=True)
+
+        # Predict AQI
+        model = joblib.load(os.path.join(BASE_DIR, "models", "air_quality_model.pkl"))
+        pred = map_air_label(model.predict([[*data.values()]])[0])
+        st.markdown(f"<h4 style='text-align:center;color:{air_color(pred)}'>Air Quality: {pred}</h4>", unsafe_allow_html=True)
+
+    except Exception as e:
+        st.error(f"DETAILS ERROR → {e}")
+
+# ========================= CITY COMPARISON =========================
+st.markdown('<div class="section-title">📊 Compare Multiple Cities</div>', unsafe_allow_html=True)
 st.markdown('<div class="gdu-card">', unsafe_allow_html=True)
 
 c1 = st.text_input("City 1")
