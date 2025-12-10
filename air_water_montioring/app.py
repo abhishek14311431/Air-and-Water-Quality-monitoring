@@ -24,33 +24,33 @@ st.set_page_config(page_title="Air & Water Quality Monitoring", page_icon="🌍"
 st.markdown("""
 <style>
 .stApp {
-    background-color: #0b66d8; /* plain blue */
+    background-image: url("https://drive.google.com/uc?export=view&id=1RWd8Uv8fyDNZMuEsLyBBCRcXitu-3L82");
     background-size: cover;
-    color: #ffffff;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    color: white;
     font-family: "Segoe UI", sans-serif;
 }
-
 .dashboard-title {
     text-align: center;
     font-size: 40px;
     font-weight: 800;
     margin-bottom: 5px;
 }
-
 .section-title {
-    text-align: left;
     font-size: 26px;
     font-weight: 700;
     margin: 20px 0 10px 0;
 }
-
 .gdu-card {
-    background: rgba(255, 255, 255, 0.10);
+    background: rgba(0, 0, 0, 0.55);
     border-radius: 16px;
     padding: 18px;
     margin-bottom: 15px;
+    color: white;
+    border: 2px solid #00eaff;
+    box-shadow: 0 0 12px #00eaff, 0 0 24px #00eaff;
 }
-
 .indicator {
     border-radius: 10px;
     padding: 10px;
@@ -58,6 +58,7 @@ st.markdown("""
     text-align: center;
     font-size: 18px;
     font-weight: 700;
+    background: rgba(0, 0, 0, 0.45);
 }
 </style>
 
@@ -137,79 +138,9 @@ with col_water:
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-# =================================================================
-# AQI HISTORY TIMELINE
-# =================================================================
-st.markdown('<div class="section-title">📜 AQI History Timeline</div>', unsafe_allow_html=True)
-st.markdown('<div class="gdu-card">', unsafe_allow_html=True)
 
-hist_city = city
 
-if st.button("Show AQI Timeline", use_container_width=True):
-    try:
-        timeline_hours = ["1 AM","3 AM","6 AM","9 AM","12 PM","3 PM","6 PM","9 PM","12 AM"]
-        timeline_values = [42, 55, 48, 60, 70, 82, 95, 88, 65]
-        df_hist = pd.DataFrame({"Time": timeline_hours, "AQI": timeline_values})
-        st.line_chart(df_hist.set_index("Time"))
-    except Exception as e:
-        st.error(f"TIMELINE ERROR → {e}")
 
-st.markdown('</div>', unsafe_allow_html=True)
-
-# =================================================================
-# CITY-WISE AQI COMPARISON
-st.markdown('<div class="section-title">🏙️ City-wise AQI Details</div>', unsafe_allow_html=True)
-st.markdown('<div class="gdu-card">', unsafe_allow_html=True)
-
-single_city = city
-
-if st.button("Get City AQI Details", use_container_width=True):
-    try:
-        c = CITY_ALIASES.get(single_city.lower().strip(), single_city)
-        data = get_air_quality_for_city(c)
-
-        st.markdown(f"<h4 style='text-align:center;'>🌍 Full AQI Report — {c.title()}</h4>", unsafe_allow_html=True)
-
-        # Show pollutant indicators
-        for k, v in data.items():
-            st.markdown(f"<div class='indicator' style='background:{pollutant_color(v)}'>{k.upper()}: {v}</div>", unsafe_allow_html=True)
-
-        # Predict AQI
-        model = joblib.load(os.path.join(BASE_DIR, "models", "air_quality_model.pkl"))
-        pred = map_air_label(model.predict([[*data.values()]])[0])
-        st.markdown(f"<h4 style='text-align:center;color:{air_color(pred)}'>Air Quality: {pred}</h4>", unsafe_allow_html=True)
-
-    except Exception as e:
-        st.error(f"DETAILS ERROR → {e}")
-
-# ========================= CITY COMPARISON =========================
-st.markdown('<div class="section-title">📊 Compare Multiple Cities</div>', unsafe_allow_html=True)
-st.markdown('<div class="gdu-card">', unsafe_allow_html=True)
-
-c1 = st.text_input("City 1")
-c2 = st.text_input("City 2")
-c3 = st.text_input("City 3 (optional)")
-
-if st.button("Compare Cities", use_container_width=True):
-    try:
-        def fetch(city):
-            city = CITY_ALIASES.get(city.lower().strip(), city)
-            return get_air_quality_for_city(city)
-
-        vals = {}
-        for c in [c1, c2, c3]:
-            if c.strip() != "":
-                data = fetch(c)
-                aqi_model = joblib.load(os.path.join(BASE_DIR, "models", "air_quality_model.pkl"))
-                pred = aqi_model.predict([[*data.values()]])[0]
-                vals[c.title()] = pred
-
-        df_compare = pd.DataFrame({"City": list(vals.keys()), "AQI Score": list(vals.values())})
-        st.bar_chart(df_compare.set_index("City"))
-    except Exception as e:
-        st.error(f"COMPARISON ERROR → {e}")
-
-st.markdown('</div>', unsafe_allow_html=True)
 
 
 
