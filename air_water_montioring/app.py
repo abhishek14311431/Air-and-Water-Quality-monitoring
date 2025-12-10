@@ -65,8 +65,11 @@ st.write("Analyze real-time environmental conditions with ML-based predictions."
 # LOAD WATER DATA
 # ---------------------------------------------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-water_path = os.path.join(BASE_DIR, "data", "water_quality_cities.csv")
+water_path = os.path.join(BASE_dir := BASE_DIR, "data", "water_quality_cities.csv")
 df_water = pd.read_csv(water_path)
+
+# Normalize column names for safe usage
+df_water.columns = df_water.columns.str.lower().str.replace(" ", "_")
 
 CITY_ALIASES = {
     "bangalore": "bengaluru",
@@ -76,7 +79,7 @@ CITY_ALIASES = {
 
 
 # =========================================================
-# 🌫️ AIR QUALITY SECTION (Universal)
+# 🌫️ AIR QUALITY SECTION
 # =========================================================
 st.markdown("<div class='section-title'>🌫️ Air Quality</div>", unsafe_allow_html=True)
 with st.container():
@@ -95,24 +98,22 @@ with st.container():
             limits = {
                 "pm2_5": (30, 60, 90),
                 "pm10": (50, 100, 150),
-                "no2": (40, 80, 180),
-                "so2": (20, 80, 380),
-                "o3": (50, 100, 200),
-                "co": (200, 400, 1000),
+                "no2":  (40, 80, 180),
+                "so2":  (20, 80, 380),
+                "o3":   (50, 100, 200),
+                "co":   (200, 400, 1000),
             }
 
             def color_icon(value, low, med, high):
-                if value <= low:
-                    return "🟢"
-                elif value <= med:
-                    return "🟡"
+                if value <= low: return "🟢"
+                if value <= med: return "🟡"
                 return "🔴"
 
             cols = st.columns(3)
+
             for i, key in enumerate(air.keys()):
                 low, med, high = limits[key]
                 icon = color_icon(air[key], low, med, high)
-
                 with cols[i % 3]:
                     st.metric(f"{icon} {key.upper()}", round(air[key], 2))
 
@@ -128,7 +129,7 @@ with st.container():
             elif pred_label == "Moderate":
                 st.warning("😷 Air quality is moderate.")
             else:
-                st.error("🚨 Air quality is poor. Avoid outdoor exposure.")
+                st.error("🚨 Poor air quality. Avoid outdoor exposure.")
 
         except Exception as e:
             st.error(str(e))
@@ -137,7 +138,7 @@ with st.container():
 
 
 # =========================================================
-# 💧 WATER QUALITY SECTION (Universal for ANY CSV)
+# 💧 WATER QUALITY SECTION (ONLY 3 FEATURES FOR ML)
 # =========================================================
 st.markdown("<div class='section-title'>💧 Water Quality</div>", unsafe_allow_html=True)
 with st.container():
@@ -149,50 +150,39 @@ with st.container():
         try:
             c2 = CITY_ALIASES.get(city_water.lower().strip(), city_water).title()
 
-            if c2 not in df_water["City"].astype(str).values:
+            if c2.lower() not in df_water["city"].astype(str).str.lower().values:
                 st.error("City not found in water dataset.")
             else:
-                row = df_water[df_water["City"] == c2].iloc[0]
+                row = df_water[df_water["city"].str.lower() == c2.lower()].iloc[0]
 
-                # Normalize headers → ANY CSV works
-                row_dict = {col.lower().replace(" ", "_"): row[col] for col in df_water.columns}
+                # Extract all available visual metrics
+                metrics = {
+                    "pH": row.get("ph"),
+                    "Hardness": row.get("hardness"),
+                    "Solids": row.get("solids"),
+                    "Chloramines": row.get("chloramines"),
+                    "Sulfate": row.get("sulfate"),
+                    "Conductivity": row.get("conductivity"),
+                    "Organic Carbon": row.get("organic_carbon"),
+                    "Trihalomethanes": row.get("trihalomethanes"),
+                    "Turbidity": row.get("turbidity"),
+                }
 
                 st.subheader(f"Water Parameters — {c2}")
-
-                # Safe extraction of values
-                pH = row_dict.get("ph")
-                Hardness = row_dict.get("hardness")
-                Solids = row_dict.get("solids") or row_dict.get("tds")
-                Chloramines = row_dict.get("chloramines")
-                Sulfate = row_dict.get("sulfate")
-                Conductivity = row_dict.get("conductivity")
-                Organic_carbon = row_dict.get("organic_carbon") or row_dict.get("organiccarbon")
-                Trihalomethanes = row_dict.get("trihalomethanes") or row_dict.get("trihalo_methanes")
-                Turbidity = row_dict.get("turbidity")
-
-                features = [
-                    ("pH", pH),
-                    ("Hardness", Hardness),
-                    ("Solids", Solids),
-                    ("Chloramines", Chloramines),
-                    ("Sulfate", Sulfate),
-                    ("Conductivity", Conductivity),
-                    ("Organic Carbon", Organic_carbon),
-                    ("Trihalomethanes", Trihalomethanes),
-                    ("Turbidity", Turbidity),
-                ]
-
                 cols = st.columns(3)
-                for i, (name, value) in enumerate(features):
-                    cols[i % 3].metric(name, round(value, 2))
 
-                # Full 9-feature prediction
+                for i, (name, value) in enumerate(metrics.items()):
+                    if pd.notna(value):
+                        cols[i % 3].metric(name, round(value, 2))
+
+                # ML PREDICTION (ONLY 3 FEATURES)
+                pH = row.get("ph")
+                Hardness = row.get("hardness")
+                Solids = row.get("solids")
+
                 model_w = joblib.load(os.path.join(BASE_DIR, "models", "water_quality_model.pkl"))
-                X_input = [[
-                    pH, Hardness, Solids,
-                    Chloramines, Sulfate, Conductivity,
-                    Organic_carbon, Trihalomethanes, Turbidity
-                ]]
+
+                X_input = [[pH, Hardness, Solids]]
 
                 pred_raw = model_w.predict(X_input)[0]
                 pred_label = "Drinkable" if pred_raw == 1 else "Not Drinkable"
@@ -202,7 +192,7 @@ with st.container():
                 if pred_label == "Drinkable":
                     st.success("💧 Water is safe to drink.")
                 else:
-                    st.error("🚱 Water is not safe for drinking.")
+                    st.error("🚱 Not safe for drinking.")
 
         except Exception as e:
             st.error(str(e))
