@@ -26,7 +26,7 @@ st.session_state.dark = st.toggle("🌙 Night Mode", value=st.session_state.dark
 mode = "dark" if st.session_state.dark else "light"
 
 # ------------------ PREMIUM GDU CSS ------------------
-st.markdown(f"""
+st.markdown("""
 <style>
 body { transition:0.4s; }
 
@@ -166,7 +166,7 @@ body { transition:0.4s; }
 </style>
 <script>
 const body = window.parent.document.body;
-if ('{mode}' === 'light') {
+if ({mode} === 'light') {
     body.className = 'main-bg light';
     body.style.background = "linear-gradient(to bottom right, #dff1ff, #a8d8ff)";
 } else {
