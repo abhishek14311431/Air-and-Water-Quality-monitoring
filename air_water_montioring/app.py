@@ -122,7 +122,7 @@ with col2:
             else:
                 row = df_water[df_water["City"] == c2].iloc[0]
                 ph, hardness, solids = row["pH"], row["Hardness"], row["Solids"]
-                background: #f5f9ff;")
+                " )
 
         except Exception as e:
             st.error(str(e))
