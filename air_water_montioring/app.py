@@ -2,11 +2,12 @@ import streamlit as st
 import joblib
 import pandas as pd
 import numpy as np
-import json
 import os
+import requests
 import plotly.express as px
-from streamlit_lottie import st_lottie
 from utils import get_air_quality_for_city
+from streamlit_lottie import st_lottie
+
 
 # -----------------------------------------------------
 # PAGE SETTINGS
@@ -17,36 +18,60 @@ st.set_page_config(
     layout="wide",
 )
 
-# -----------------------------------------------------
-# LOAD LOTTIE ANIMATIONS
-# -----------------------------------------------------
-def load_lottie(path):
-    with open(path, "r") as f:
-        return json.load(f)
 
-solar_anim = load_lottie("animations/solar.json")
-air_anim = load_lottie("animations/air.json")
-water_anim = load_lottie("animations/water.json")
+# -----------------------------------------------------
+# FUNCTION TO LOAD LOTTIE ANIMATIONS FROM URL
+# -----------------------------------------------------
+def load_lottie_url(url: str):
+    try:
+        r = requests.get(url)
+        if r.status_code == 200:
+            return r.json()
+        else:
+            return None
+    except:
+        return None
+
+
+# -----------------------------------------------------
+# LOTTIE ANIMATIONS (URL BASED)
+# -----------------------------------------------------
+solar_anim = load_lottie_url(
+    "https://lottie.host/e0e7c9d9-ae3f-4b4a-b566-5ad240b40858/4oWjXLkb44.json"
+)
+
+air_anim = load_lottie_url(
+    "https://lottie.host/597ad4e2-202d-4cff-bf9d-8fbfeba2aede/1QWohG7m3E.json"
+)
+
+water_anim = load_lottie_url(
+    "https://lottie.host/df96b6ac-292b-4525-b315-36f3e30dbd38/gTxKN3U5UD.json"
+)
+
 
 # -----------------------------------------------------
 # HEADER WITH SOLAR ANIMATION
 # -----------------------------------------------------
-colA, colB, colC = st.columns([1, 2, 1])
-with colB:
-    st_lottie(solar_anim, height=230)
+col1, col2, col3 = st.columns([1, 2, 1])
+with col2:
+    st_lottie(solar_anim, height=220)
 
 st.title("🌍 Air & Water Quality Monitoring Dashboard")
-st.write("Real-time monitoring with predictions, animations, and pollutant indicators.")
+st.write("Real-time environmental monitoring with predictions and indicators.")
 
 
 # -----------------------------------------------------
 # LOAD WATER DATA
 # -----------------------------------------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-water_path = os.path.join(BASE_DIR, "data", "water_quality_cities.csv")
-df_water = pd.read_csv(water_path)
+water_csv_path = os.path.join(BASE_DIR, "data", "water_quality_cities.csv")
+df_water = pd.read_csv(water_csv_path)
 
-CITY_ALIASES = {"bangalore": "bengaluru", "banglore": "bengaluru", "bombay": "mumbai"}
+CITY_ALIASES = {
+    "bangalore": "bengaluru",
+    "banglore": "bengaluru",
+    "bombay": "mumbai",
+}
 
 
 # -----------------------------------------------------
@@ -72,19 +97,20 @@ def get_color_icon(val, low, med, high):
 # =====================================================
 st.header("🌫️ Air Quality")
 
-col_icon, col_text = st.columns([1, 5])
-with col_icon:
-    st_lottie(air_anim, height=120)
-with col_text:
-    city = st.text_input("Enter a City for Air Quality")
+left, right = st.columns([1, 5])
+with left:
+    st_lottie(air_anim, height=130)
+with right:
+    city = st.text_input("Enter a city name for Air Quality")
 
 if st.button("Fetch Air Quality", type="primary"):
     try:
-        c = CITY_ALIASES.get(city.lower().strip(), city)
-        data = get_air_quality_for_city(c)
+        proper_city = CITY_ALIASES.get(city.lower().strip(), city)
+        data = get_air_quality_for_city(proper_city)
 
-        st.subheader(f"Pollutant Levels in {c.title()}")
+        st.subheader(f"Pollutant Levels in {proper_city.title()}")
 
+        # thresholds
         limits = {
             "pm2_5": (30, 60, 90),
             "pm10": (50, 100, 150),
@@ -95,22 +121,24 @@ if st.button("Fetch Air Quality", type="primary"):
         }
 
         cols = st.columns(3)
-        for i, (name, val) in enumerate(data.items()):
+        for i, (name, value) in enumerate(data.items()):
             low, med, high = limits[name]
-            icon = get_color_icon(val, low, med, high)
-            cols[i % 3].metric(f"{icon} {name.upper()}", val)
+            icon = get_color_icon(value, low, med, high)
+            cols[i % 3].metric(f"{icon} {name.upper()}", value)
 
+        # prediction
         model = joblib.load(os.path.join(BASE_DIR, "models", "air_quality_model.pkl"))
-        pred = map_air_label(model.predict([[*data.values()]])[0])
+        pred_raw = model.predict([[*data.values()]])[0]
+        pred_label = map_air_label(pred_raw)
 
-        st.subheader(f"Air Quality Category: {pred}")
+        st.subheader(f"Air Quality Category: {pred_label}")
 
-        if pred == "Good":
-            st.success("🌿 Air quality is GOOD.")
-        elif pred == "Moderate":
-            st.warning("😷 Moderate air — sensitive groups should wear a mask.")
+        if pred_label == "Good":
+            st.success("🌿 Air quality is good.")
+        elif pred_label == "Moderate":
+            st.warning("😷 Air quality is moderate.")
         else:
-            st.error("🚨 Poor air quality — avoid exposure.")
+            st.error("🚨 Poor air quality! Avoid going outside.")
 
     except Exception as e:
         st.error(str(e))
@@ -121,18 +149,18 @@ if st.button("Fetch Air Quality", type="primary"):
 # =====================================================
 st.header("💧 Water Quality")
 
-col_w_icon, col_w_text = st.columns([1, 5])
-with col_w_icon:
-    st_lottie(water_anim, height=120)
-with col_w_text:
-    city2 = st.text_input("Enter a City for Water Quality")
+left2, right2 = st.columns([1, 5])
+with left2:
+    st_lottie(water_anim, height=130)
+with right2:
+    city2 = st.text_input("Enter a city name for Water Quality")
 
 if st.button("Fetch Water Quality", type="secondary"):
     try:
         c2 = CITY_ALIASES.get(city2.lower().strip(), city2).title()
 
-        if c2 not in df_water["City"].tolist():
-            st.error("City not found in dataset.")
+        if c2 not in df_water["City"].values:
+            st.error("City not found in water dataset.")
         else:
             row = df_water[df_water["City"] == c2].iloc[0]
             ph, hardness, solids = row["pH"], row["Hardness"], row["Solids"]
@@ -153,43 +181,44 @@ if st.button("Fetch Water Quality", type="secondary"):
                 icon = get_color_icon(val, low, med, high)
                 cols[i].metric(f"{icon} {name}", val)
 
-            model = joblib.load(os.path.join(BASE_DIR, "models", "water_quality_model.pkl"))
-            pred = map_water_label(model.predict([[ph, hardness, solids]])[0])
+            model_w = joblib.load(os.path.join(BASE_DIR, "models", "water_quality_model.pkl"))
+            pred_raw = model_w.predict([[ph, hardness, solids]])[0]
+            pred_label = map_water_label(pred_raw)
 
-            st.subheader(f"Water Quality: {pred}")
+            st.subheader(f"Water Quality: {pred_label}")
 
-            if pred == "Drinkable":
-                st.success("💧 Water is safe to drink.")
+            if pred_label == "Drinkable":
+                st.success("💧 The water is safe to drink.")
             else:
-                st.error("🚱 Not safe — use filtered/bottled water.")
+                st.error("🚱 Not safe. Use filtered or bottled water.")
 
     except Exception as e:
         st.error(str(e))
 
 
 # =====================================================
-# 📊 CITY COMPARISON — PIE CHART
+# 📊 CITY COMPARISON
 # =====================================================
-st.header("📊 Compare AQI Between Cities (PM2.5 Levels)")
+st.header("📊 Compare PM2.5 Across Cities")
 
 cityA = st.text_input("City 1")
 cityB = st.text_input("City 2")
 cityC = st.text_input("City 3 (optional)")
 
-if st.button("Compare AQI"):
+if st.button("Compare"):
     try:
         cities = [cityA, cityB, cityC]
-        labels = []
+        valid_labels = []
         pm_values = []
 
         for c in cities:
             if c.strip():
-                cname = CITY_ALIASES.get(c.lower().strip(), c)
-                pm = get_air_quality_for_city(cname)["pm2_5"]
-                labels.append(cname.title())
+                fixed = CITY_ALIASES.get(c.lower().strip(), c)
+                pm = get_air_quality_for_city(fixed)["pm2_5"]
+                valid_labels.append(fixed.title())
                 pm_values.append(pm)
 
-        df = pd.DataFrame({"City": labels, "PM2.5": pm_values})
+        df = pd.DataFrame({"City": valid_labels, "PM2.5": pm_values})
         fig = px.pie(df, names="City", values="PM2.5")
         st.plotly_chart(fig)
 
