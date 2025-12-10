@@ -122,7 +122,17 @@ with col2:
             else:
                 row = df_water[df_water["City"] == c2].iloc[0]
                 ph, hardness, solids = row["pH"], row["Hardness"], row["Solids"]
-                " )
+
+                st.write("### Water Parameters")
+                params = [("pH", ph), ("Hardness", hardness), ("Solids", solids)]
+                for i in range(0, len(params), 3):
+                    cols_w = st.columns(3)
+                    for (n, v), wc in zip(params[i:i+3], cols_w):
+                        wc.markdown(f"<div class='metric-circle'>{n}<br>{v}</div>", unsafe_allow_html=True)
+
+                model = joblib.load(os.path.join(BASE_DIR, "models", "water_quality_model.pkl"))
+                pred = map_water_label(model.predict([[ph, hardness, solids]])[0])
+                st.write(f"### Water Quality: {pred}")
 
         except Exception as e:
             st.error(str(e))
@@ -167,4 +177,3 @@ df_heat = pd.DataFrame({"City": heat_cities, "AQI": heat_values}).set_index("Cit
 st.bar_chart(df_heat)
 
 st.markdown('</div>', unsafe_allow_html=True)
-
