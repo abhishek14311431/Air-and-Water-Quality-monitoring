@@ -54,4 +54,107 @@ def water_color(x): return {"Drinkable":"#16A34A","Not Drinkable":"#DC2626"}[x]
 
 # ---------------- AIR QUALITY SECTION ----------------
 st.markdown('<p class="sub">🌬️ Air Quality Check</p>', unsafe_allow_html=True)
-st.markdown('<div cl
+st.markdown('<div class="card">', unsafe_allow_html=True)
+
+city = st.text_input("Enter City (Air Quality)")
+
+if st.button("Get Air Quality", use_container_width=True):
+    try:
+        c = city.strip().lower()
+        if c in CITY_ALIASES:
+            city = CITY_ALIASES[c]
+
+        data = get_air_quality_for_city(city)
+
+        st.markdown(f"<h3>Live Pollutants in {city.title()}</h3>", unsafe_allow_html=True)
+        st.write(data)
+
+        model = joblib.load(os.path.join(BASE_DIR, "models", "air_quality_model.pkl"))
+        X = np.array([[data[i] for i in data]])
+        pred = model.predict(X)[0]
+
+        label = map_air_label(pred)
+        color = air_color(label)
+
+        st.markdown(f'<div class="result-box" style="background:{color};padding:20px;border-radius:12px;text-align:center;font-size:28px;">{label} Air Quality</div>', unsafe_allow_html=True)
+
+    except Exception as e:
+        st.error(f"API ERROR → {e}")  # 🔥 REPLACED GENERIC ERROR
+
+st.markdown('</div>', unsafe_allow_html=True)
+
+# ----- AQI Prediction (Tomorrow) -----
+st.markdown('<div class="card">', unsafe_allow_html=True)
+st.markdown("<h3>Predict Tomorrow's Air Quality</h3>", unsafe_allow_html=True)
+
+today = st.number_input("Today's AQI", min_value=0.0)
+yesterday = st.number_input("Yesterday's AQI", min_value=0.0)
+
+if st.button("Predict Tomorrow AQI", use_container_width=True):
+    tomorrow = today * 0.6 + yesterday * 0.4
+
+    df = pd.DataFrame({"Day":["Yesterday","Today","Tomorrow"],"AQI":[yesterday,today,tomorrow]})
+    st.line_chart(df.set_index("Day"))
+
+    if tomorrow > 150:
+        st.error("⚠️ High Pollution! Mask is compulsory.")
+    elif tomorrow > 100:
+        st.warning("😷 Moderate Pollution. Mask recommended.")
+    else:
+        st.success("🌱 Air Quality is good.")
+
+st.markdown('</div>', unsafe_allow_html=True)
+
+# ---------------- WATER QUALITY SECTION ----------------
+st.markdown('<p class="sub">💧 Water Quality Prediction</p>', unsafe_allow_html=True)
+st.markdown('<div class="card">', unsafe_allow_html=True)
+
+city2 = st.text_input("Enter City (Water Quality)")
+
+if st.button("Check Water Quality", use_container_width=True):
+    try:
+        c2 = city2.strip().lower()
+        c2 = CITY_ALIASES.get(c2, city2).title()
+
+        if c2 not in df_water["City"].tolist():
+            st.error("City not found in water dataset")
+        else:
+            row = df_water[df_water["City"] == c2].iloc[0]
+            ph, hardness, solids = row["pH"], row["Hardness"], row["Solids"]
+            st.write({"pH":ph,"Hardness":hardness,"Solids":solids})
+
+            model = joblib.load(os.path.join(BASE_DIR, "models", "water_quality_model.pkl"))
+            pred = model.predict([[ph, hardness, solids]])[0]
+
+            label = map_water_label(pred)
+            color = water_color(label)
+
+            st.markdown(f'<div class="result-box" style="background:{color};padding:20px;border-radius:12px;text-align:center;font-size:28px;">{label}</div>', unsafe_allow_html=True)
+
+    except Exception as e:
+        st.error(f"WATER ERROR → {e}")
+
+st.markdown('</div>', unsafe_allow_html=True)
+
+# ------------ Water Tomorrow Prediction -------------
+st.markdown('<div class="card">', unsafe_allow_html=True)
+st.markdown("<h3>Predict Tomorrow's Water Quality</h3>", unsafe_allow_html=True)
+
+today_w = st.number_input("Today's WQI", min_value=0.0)
+yesterday_w = st.number_input("Yesterday's WQI", min_value=0.0)
+
+if st.button("Predict Tomorrow WQI", use_container_width=True):
+    tomorrow_w = (today_w + yesterday_w)/2
+    df_w = pd.DataFrame({"Day":["Yesterday","Today","Tomorrow"],"WQI":[yesterday_w,today_w,tomorrow_w]})
+    st.line_chart(df_w.set_index("Day"))
+
+    if tomorrow_w < 50:
+        st.error("🚱 Water unsafe! Do NOT drink.")
+    elif tomorrow_w < 80:
+        st.warning("⚠️ Water quality moderate.")
+    else:
+        st.success("💧 Water is safe.")
+
+st.markdown('</div>', unsafe_allow_html=True)
+
+st.markdown("<p style='text-align:center;color:white;font-weight:700;margin-top:25px;'>Designed with ❤️ for Academic Project</p>", unsafe_allow_html=True)
