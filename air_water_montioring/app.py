@@ -127,11 +127,13 @@ yesterday = st.number_input("Yesterday's AQI", min_value=0.0)
 
 if st.button("Predict Tomorrow AQI", use_container_width=True):
     tomorrow_aqi = (today * 0.6) + (yesterday * 0.4)
-    # Line graph data
-    import plotly.graph_objects as go
-    fig_aqi = go.Figure()
-    fig_aqi.add_trace(go.Scatter(x=["Yesterday", "Today", "Tomorrow"], y=[yesterday, today, tomorrow_aqi], mode='lines+markers'))
-    st.plotly_chart(fig_aqi, use_container_width=True)
+    # Line graph data using Streamlit built-in chart
+    import pandas as pd
+    df_aqi = pd.DataFrame({
+        "Day": ["Yesterday", "Today", "Tomorrow"],
+        "AQI": [yesterday, today, tomorrow_aqi]
+    })
+    st.line_chart(df_aqi.set_index("Day"))
     # Advice
     if tomorrow_aqi > 150:
         st.error("⚠️ High Pollution! Wearing a mask is compulsory.")
