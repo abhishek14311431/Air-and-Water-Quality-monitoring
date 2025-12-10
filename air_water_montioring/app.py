@@ -24,33 +24,37 @@ st.set_page_config(page_title="Air & Water Quality Monitoring", page_icon="🌍"
 st.markdown("""
 <style>
 .stApp {
-    background-image: url("https://drive.google.com/uc?export=view&id=1RWd8Uv8fyDNZMuEsLyBBCRcXitu-3L82");
+    background: linear-gradient(to bottom right, #a8d8ff, #dff3ff); /* light blue background */
     background-size: cover;
     background-repeat: no-repeat;
     background-attachment: fixed;
-    color: white;
+    color: #000000;
     font-family: "Segoe UI", sans-serif;
 }
+
 .dashboard-title {
     text-align: center;
     font-size: 40px;
     font-weight: 800;
     margin-bottom: 5px;
 }
+
 .section-title {
     font-size: 26px;
     font-weight: 700;
     margin: 20px 0 10px 0;
 }
+
 .gdu-card {
-    background: rgba(0, 0, 0, 0.55);
+    background: rgba(255, 255, 255, 0.55);
     border-radius: 16px;
     padding: 18px;
     margin-bottom: 15px;
-    color: white;
+    color: black;
     border: 2px solid #00eaff;
     box-shadow: 0 0 12px #00eaff, 0 0 24px #00eaff;
 }
+
 .indicator {
     border-radius: 10px;
     padding: 10px;
@@ -58,7 +62,7 @@ st.markdown("""
     text-align: center;
     font-size: 18px;
     font-weight: 700;
-    background: rgba(0, 0, 0, 0.45);
+    background: rgba(255, 255, 255, 0.45);
 }
 </style>
 
