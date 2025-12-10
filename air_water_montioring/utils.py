@@ -1,12 +1,19 @@
 import requests
 import streamlit as st
+import pandas as pd
+import os
 
+
+# ----------------------------------------------------
+#       AIR QUALITY FETCH FROM OPENWEATHER API
+# ----------------------------------------------------
 def get_air_quality_for_city(city_name: str):
     API_KEY = st.secrets.get("openweather_api_key")
 
     if not API_KEY:
         raise Exception("API Key not found. Add `openweather_api_key` in secrets.toml")
 
+    # 1. GET COORDINATES (lat/lon)
     geo_url = "https://api.openweathermap.org/geo/1.0/direct"
     geo_params = {"q": city_name, "limit": 1, "appid": API_KEY}
 
@@ -19,6 +26,7 @@ def get_air_quality_for_city(city_name: str):
     lat = geo_data[0]["lat"]
     lon = geo_data[0]["lon"]
 
+    # 2. GET AIR POLLUTION DATA
     air_url = "https://api.openweathermap.org/data/2.5/air_pollution"
     air_params = {"lat": lat, "lon": lon, "appid": API_KEY}
 
@@ -35,3 +43,14 @@ def get_air_quality_for_city(city_name: str):
         "o3": comp["o3"],
         "co": comp["co"],
     }
+
+
+# ----------------------------------------------------
+#           LOAD WATER DATASET (150 Cities)
+# ----------------------------------------------------
+def load_water_dataset():
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    data_path = os.path.join(BASE_DIR, "data", "water_quality_cities.csv")
+
+    df = pd.read_csv(data_path)
+    return df
