@@ -6,223 +6,234 @@ import os
 import requests
 import plotly.express as px
 from utils import get_air_quality_for_city
-from streamlit.components.v1 import html
 
 
-# -----------------------------------------------------
-# PAGE CONFIG
-# -----------------------------------------------------
+# ---------------------------------------------------------
+# PAGE CONFIG + GLOBAL STYLE
+# ---------------------------------------------------------
 st.set_page_config(
     page_title="Air & Water Quality Monitoring",
     page_icon="🌍",
-    layout="wide"
+    layout="wide",
 )
 
-# -----------------------------------------------------
-# FUNCTION TO RENDER LOTTIE FROM URL (HTML METHOD)
-# -----------------------------------------------------
-def st_lottie(url: str, height: int = 200):
-    html(
-        f"""
-        <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
-        <lottie-player 
-            src="{url}" 
-            background="transparent" 
-            speed="1" 
-            style="width: 100%; height: {height}px;" 
-            loop 
-            autoplay>
-        </lottie-player>
-        """,
-        height=height,
-    )
+# ---- CLEAN BACKGROUND ----
+st.markdown(
+    """
+    <style>
+        .stApp {
+            background-color: #f2f4f7;
+            background-image: linear-gradient(135deg, #eef1f5 0%, #dfe3e8 100%);
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .main-title {
+            font-size: 46px;
+            text-align: center;
+            font-weight: 900;
+            color: #0a0a0a;
+            margin-top: -20px;
+        }
+
+        .section-title {
+            font-size: 32px;
+            color: #0a2540;
+            font-weight: 800;
+            margin-bottom: 10px;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 16px;
+            box-shadow: 0 6px 25px rgba(0,0,0,0.12);
+            margin-bottom: 25px;
+        }
+
+        .metric-box {
+            background: #f7f9fc;
+            padding: 18px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: inset 0 0 8px rgba(0,0,0,0.05);
+        }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+# ---------------------------------------------------------
+# TITLE
+# ---------------------------------------------------------
+st.markdown("<div class='main-title'>🌍 Air & Water Quality Monitoring</div>", unsafe_allow_html=True)
+st.write("Analyze live environmental conditions with ML-based predictions.")
 
 
-# -----------------------------------------------------
-# LOTTIE ANIMATION URLS
-# -----------------------------------------------------
-solar_url = "https://lottie.host/e0e7c9d9-ae3f-4b4a-b566-5ad240b40858/4oWjXLkb44.json"
-air_url = "https://lottie.host/597ad4e2-202d-4cff-bf9d-8fbfeba2aede/1QWohG7m3E.json"
-water_url = "https://lottie.host/df96b6ac-292b-4525-b315-36f3e30dbd38/gTxKN3U5UD.json"
-
-
-# -----------------------------------------------------
-# HEADER WITH SOLAR ANIMATION
-# -----------------------------------------------------
-col1, col2, col3 = st.columns([1, 2, 1])
-with col2:
-    st_lottie(solar_url, height=220)
-
-st.title("🌍 Air & Water Quality Monitoring Dashboard")
-st.write("Real-time environmental monitoring with predictions, indicators and animations.")
-
-
-# -----------------------------------------------------
+# ---------------------------------------------------------
 # LOAD WATER DATA
-# -----------------------------------------------------
+# ---------------------------------------------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-water_data_path = os.path.join(BASE_DIR, "data", "water_quality_cities.csv")
-df_water = pd.read_csv(water_data_path)
+water_path = os.path.join(BASE_DIR, "data", "water_quality_cities.csv")
+df_water = pd.read_csv(water_path)
 
 CITY_ALIASES = {
     "bangalore": "bengaluru",
     "banglore": "bengaluru",
-    "bombay": "mumbai"
+    "bombay": "mumbai",
 }
 
 
-# -----------------------------------------------------
-# HELPER FUNCTIONS
-# -----------------------------------------------------
-def map_air_label(x):
+def map_air(x):
     return {0: "Good", 1: "Moderate", 2: "Poor"}.get(x)
 
-def map_water_label(x):
+
+def map_water(x):
     return "Drinkable" if x == 1 else "Not Drinkable"
 
-def get_color_icon(val, low, med, high):
-    if val <= low:
-        return "🟢"
-    elif val <= med:
-        return "🟡"
-    else:
-        return "🔴"
+
+def color_icon(val, low, med, high):
+    if val <= low: return "🟢"
+    if val <= med: return "🟡"
+    return "🔴"
 
 
-# =====================================================
+# =========================================================
 # 🌫️ AIR QUALITY SECTION
-# =====================================================
-st.header("🌫️ Air Quality")
+# =========================================================
+st.markdown("<div class='section-title'>🌫️ Air Quality</div>", unsafe_allow_html=True)
+with st.container():
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
 
-air_c1, air_c2 = st.columns([1, 5])
-with air_c1:
-    st_lottie(air_url, height=130)
+    city_air = st.text_input("Enter city name for Air Quality")
 
-with air_c2:
-    city_air = st.text_input("Enter a city for Air Quality")
+    if st.button("Fetch Air Quality", type="primary"):
+        try:
+            c = CITY_ALIASES.get(city_air.lower().strip(), city_air)
+            air = get_air_quality_for_city(c)
 
-if st.button("Fetch Air Quality", type="primary"):
-    try:
-        fixed_city = CITY_ALIASES.get(city_air.lower().strip(), city_air)
-        data = get_air_quality_for_city(fixed_city)
+            st.subheader(f"Pollutant Levels in {c.title()}")
 
-        st.subheader(f"Pollutant Levels in {fixed_city.title()}")
-
-        limits = {
-            "pm2_5": (30, 60, 90),
-            "pm10": (50, 100, 150),
-            "no2": (40, 80, 180),
-            "so2": (20, 80, 380),
-            "o3": (50, 100, 200),
-            "co": (200, 400, 1000),
-        }
-
-        cols = st.columns(3)
-        keys = list(data.keys())
-
-        for i in range(len(keys)):
-            pollutant = keys[i]
-            value = data[pollutant]
-
-            low, med, high = limits[pollutant]
-            icon = get_color_icon(value, low, med, high)
-            cols[i % 3].metric(f"{icon} {pollutant.upper()}", value)
-
-        # Model prediction
-        model_air = joblib.load(os.path.join(BASE_DIR, "models", "air_quality_model.pkl"))
-        prediction_raw = model_air.predict([[*data.values()]])[0]
-        prediction_label = map_air_label(prediction_raw)
-
-        st.subheader(f"Air Quality Category: {prediction_label}")
-
-        if prediction_label == "Good":
-            st.success("🌿 Air is safe to breathe.")
-        elif prediction_label == "Moderate":
-            st.warning("😷 Moderate air — sensitive groups should use a mask.")
-        else:
-            st.error("🚨 Poor air quality — avoid going outside.")
-
-    except Exception as e:
-        st.error(str(e))
-
-
-# =====================================================
-# 💧 WATER QUALITY SECTION
-# =====================================================
-st.header("💧 Water Quality")
-
-water_c1, water_c2 = st.columns([1, 5])
-with water_c1:
-    st_lottie(water_url, height=130)
-
-with water_c2:
-    city_water = st.text_input("Enter a city for Water Quality")
-
-if st.button("Fetch Water Quality", type="secondary"):
-    try:
-        fixed_city2 = CITY_ALIASES.get(city_water.lower().strip(), city_water).title()
-
-        if fixed_city2 not in df_water["City"].values:
-            st.error("City not found in water dataset.")
-        else:
-            row = df_water[df_water["City"] == fixed_city2].iloc[0]
-            ph, hardness, solids = row["pH"], row["Hardness"], row["Solids"]
-
-            st.subheader(f"Water Parameters — {fixed_city2}")
-
+            # thresholds
             limits = {
-                "pH": (6.5, 8.5, 9.5),
-                "Hardness": (150, 300, 500),
-                "Solids": (300, 600, 900),
+                "pm2_5": (30, 60, 90),
+                "pm10": (50, 100, 150),
+                "no2": (40, 80, 180),
+                "so2": (20, 80, 380),
+                "o3": (50, 100, 200),
+                "co": (200, 400, 1000),
             }
 
-            params = [("pH", ph), ("Hardness", hardness), ("Solids", solids)]
             cols = st.columns(3)
+            keys = list(air.keys())
 
-            for i, (name, value) in enumerate(params):
-                low, med, high = limits[name]
-                icon = get_color_icon(value, low, med, high)
-                cols[i].metric(f"{icon} {name}", value)
+            for i, key in enumerate(keys):
+                low, med, high = limits[key]
+                icon = color_icon(air[key], low, med, high)
+                with cols[i % 3]:
+                    st.metric(f"{icon} {key.upper()}", air[key])
 
-            model_water = joblib.load(os.path.join(BASE_DIR, "models", "water_quality_model.pkl"))
-            pred_raw = model_water.predict([[ph, hardness, solids]])[0]
-            pred_label = map_water_label(pred_raw)
+            # Prediction
+            model_a = joblib.load(os.path.join(BASE_DIR, "models", "air_quality_model.pkl"))
+            pred_raw = model_a.predict([[*air.values()]])[0]
+            pred_label = map_air(pred_raw)
 
-            st.subheader(f"Water Quality: {pred_label}")
+            st.subheader(f"Air Quality Category: {pred_label}")
 
-            if pred_label == "Drinkable":
-                st.success("💧 Water is safe to drink.")
+            if pred_label == "Good":
+                st.success("🌿 Air is safe to breathe.")
+            elif pred_label == "Moderate":
+                st.warning("😷 Air quality is moderate.")
             else:
-                st.error("🚱 Not safe — use filtered or bottled water.")
+                st.error("🚨 Air quality is poor. Avoid outdoor exposure.")
 
-    except Exception as e:
-        st.error(str(e))
+        except Exception as e:
+            st.error(str(e))
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
-# =====================================================
-# 📊 CITY COMPARISON PIE CHART
-# =====================================================
-st.header("📊 Compare PM2.5 Across Cities")
+# =========================================================
+# 💧 WATER QUALITY SECTION
+# =========================================================
+st.markdown("<div class='section-title'>💧 Water Quality</div>", unsafe_allow_html=True)
+with st.container():
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
 
-city1 = st.text_input("City 1")
-city2 = st.text_input("City 2")
-city3 = st.text_input("City 3 (optional)")
+    city_water = st.text_input("Enter city name for Water Quality")
 
-if st.button("Compare Cities", type="primary"):
-    try:
-        cities = [city1, city2, city3]
-        labels, values = [], []
+    if st.button("Fetch Water Quality", type="secondary"):
+        try:
+            c2 = CITY_ALIASES.get(city_water.lower().strip(), city_water).title()
 
-        for c in cities:
-            if c.strip():
-                fixed = CITY_ALIASES.get(c.lower().strip(), c)
-                pm = get_air_quality_for_city(fixed)["pm2_5"]
-                labels.append(fixed.title())
-                values.append(pm)
+            if c2 not in df_water["City"].values:
+                st.error("City not found in water dataset.")
+            else:
+                row = df_water[df_water["City"] == c2].iloc[0]
+                ph, hardness, solids = row["pH"], row["Hardness"], row["Solids"]
 
-        df = pd.DataFrame({"City": labels, "PM2.5": values})
-        fig = px.pie(df, names="City", values="PM2.5", title="City PM2.5 Comparison")
-        st.plotly_chart(fig)
+                st.subheader(f"Water Parameters — {c2}")
 
-    except Exception as e:
-        st.error(str(e))
+                limits = {
+                    "pH": (6.5, 8.5, 9.5),
+                    "Hardness": (150, 300, 500),
+                    "Solids": (300, 600, 900),
+                }
+
+                params = [("pH", ph), ("Hardness", hardness), ("Solids", solids)]
+                cols = st.columns(3)
+
+                for i, (key, value) in enumerate(params):
+                    low, med, high = limits[key]
+                    icon = color_icon(value, low, med, high)
+                    cols[i].metric(f"{icon} {key}", value)
+
+                model_w = joblib.load(os.path.join(BASE_DIR, "models", "water_quality_model.pkl"))
+                pred_raw = model_w.predict([[ph, hardness, solids]])[0]
+                pred_label = map_water(pred_raw)
+
+                st.subheader(f"Water Quality: {pred_label}")
+
+                if pred_label == "Drinkable":
+                    st.success("💧 Water is safe to drink.")
+                else:
+                    st.error("🚱 Water is not safe for drinking.")
+
+        except Exception as e:
+            st.error(str(e))
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+# =========================================================
+# 📊 CITY COMPARISON
+# =========================================================
+st.markdown("<div class='section-title'>📊 Compare PM2.5 Across Cities</div>", unsafe_allow_html=True)
+with st.container():
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
+
+    c1 = st.text_input("City 1")
+    c2 = st.text_input("City 2")
+    c3 = st.text_input("City 3 (optional)")
+
+    if st.button("Compare Cities"):
+        try:
+            cities = [c1, c2, c3]
+            labels = []
+            values = []
+
+            for c in cities:
+                if c.strip():
+                    fixed = CITY_ALIASES.get(c.lower().strip(), c)
+                    pm = get_air_quality_for_city(fixed)["pm2_5"]
+                    labels.append(fixed.title())
+                    values.append(pm)
+
+            df = pd.DataFrame({"City": labels, "PM2.5": values})
+            fig = px.pie(df, names="City", values="PM2.5", title="PM2.5 Comparison")
+
+            st.plotly_chart(fig)
+
+        except Exception as e:
+            st.error(str(e))
+
+    st.markdown("</div>", unsafe_allow_html=True)
