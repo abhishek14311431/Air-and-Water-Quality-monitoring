@@ -6,7 +6,6 @@ import os
 import plotly.express as px
 from utils import get_air_quality_for_city
 
-
 # ---------------------------------------------------------
 # PAGE CONFIG + GLOBAL STYLE
 # ---------------------------------------------------------
@@ -60,7 +59,6 @@ st.markdown(
 st.markdown("<div class='main-title'>🌍 Air & Water Quality Monitoring</div>", unsafe_allow_html=True)
 st.write("Analyze real-time environmental conditions with ML-based predictions.")
 
-
 # ---------------------------------------------------------
 # LOAD WATER DATA
 # ---------------------------------------------------------
@@ -71,15 +69,29 @@ df_water = pd.read_csv(water_path)
 # Normalize column names
 df_water.columns = df_water.columns.str.lower().str.replace(" ", "_")
 
+# Ensure city column is lowercase
+df_water["city"] = df_water["city"].str.lower().str.strip()
+
 CITY_ALIASES = {
     "bangalore": "bengaluru",
     "banglore": "bengaluru",
     "bombay": "mumbai",
 }
 
+# ---------------------------------------------------------
+# FLEXIBLE CITY MATCHING
+# ---------------------------------------------------------
+def find_city_match(city_name, df):
+    city_name = city_name.lower().strip()
+
+    for c in df["city"]:
+        if c.lower().strip() == city_name:
+            return c
+
+    return None
 
 # ---------------------------------------------------------
-# ICON COLOR FUNCTION
+# ICON + COLOR LOGIC
 # ---------------------------------------------------------
 def classify_pollutant(value, low, high):
     if value <= low:
@@ -88,9 +100,8 @@ def classify_pollutant(value, low, high):
         return "Moderate", "🟡", "#FFD700"
     return "Poor", "🔴", "#FF4C4C"
 
-
 # =========================================================
-# 🌫️ AIR QUALITY SECTION (FULLY UPDATED)
+# 🌫️ AIR QUALITY SECTION
 # =========================================================
 st.markdown("<div class='section-title'>🌫️ Air Quality</div>", unsafe_allow_html=True)
 with st.container():
@@ -98,7 +109,7 @@ with st.container():
 
     city_air = st.text_input("Enter city name for Air Quality")
 
-    if st.button("Fetch Air Quality", type="primary"):
+    if st.button("Fetch Air Quality"):
         try:
             c = CITY_ALIASES.get(city_air.lower().strip(), city_air)
             air = get_air_quality_for_city(c)
@@ -138,7 +149,7 @@ with st.container():
                 """
                 cols[i % 3].markdown(html, unsafe_allow_html=True)
 
-            # FINAL AQI BY LOGIC
+            # Final AQI
             if "Poor" in statuses:
                 final = "Poor"
             elif "Moderate" in statuses:
@@ -151,7 +162,7 @@ with st.container():
             if final == "Good":
                 st.success("🌿 Air is safe to breathe.")
             elif final == "Moderate":
-                st.warning("😷 Moderate air quality. Sensitive individuals should take care.")
+                st.warning("😷 Moderate air quality. Sensitive individuals should be cautious.")
             else:
                 st.error("🚨 Poor air quality. Avoid outdoor exposure.")
 
@@ -162,7 +173,7 @@ with st.container():
 
 
 # =========================================================
-# 💧 WATER QUALITY SECTION (9 PARAMETERS + 3-FEATURE ML)
+# 💧 WATER QUALITY SECTION (FULL UI)
 # =========================================================
 st.markdown("<div class='section-title'>💧 Water Quality</div>", unsafe_allow_html=True)
 with st.container():
@@ -172,12 +183,14 @@ with st.container():
 
     if st.button("Fetch Water Quality"):
         try:
-            c2 = CITY_ALIASES.get(city_water.lower().strip(), city_water).title()
+            c2 = CITY_ALIASES.get(city_water.lower().strip(), city_water)
 
-            if c2.lower() not in df_water["city"].values:
-                st.error("City not found in water dataset.")
+            matched_city = find_city_match(c2, df_water)
+
+            if matched_city is None:
+                st.error(f"City '{c2}' not found in water dataset.")
             else:
-                row = df_water[df_water["city"] == c2.lower()].iloc[0]
+                row = df_water[df_water["city"] == matched_city].iloc[0]
 
                 metrics = {
                     "pH": row.get("ph"),
@@ -191,7 +204,6 @@ with st.container():
                     "Turbidity": row.get("turbidity"),
                 }
 
-                # Threshold ranges
                 limits = {
                     "pH": (6.5, 8.5),
                     "Hardness": (150, 300),
@@ -204,7 +216,7 @@ with st.container():
                     "Turbidity": (1, 3),
                 }
 
-                st.subheader(f"Water Parameters — {c2}")
+                st.subheader(f"Water Parameters — {matched_city.title()}")
 
                 cols = st.columns(3)
 
@@ -234,14 +246,14 @@ with st.container():
                 X_in = [[row["ph"], row["hardness"], row["solids"]]]
                 pred = model_w.predict(X_in)[0]
 
-                final_water = "Drinkable" if pred == 1 else "Not Drinkable"
+                water_status = "Drinkable" if pred == 1 else "Not Drinkable"
 
-                st.subheader(f"Water Quality: {final_water}")
+                st.subheader(f"Water Quality: {water_status}")
 
-                if final_water == "Drinkable":
+                if water_status == "Drinkable":
                     st.success("💧 Water is safe for drinking.")
                 else:
-                    st.error("🚱 Not safe for drinking.")
+                    st.error("🚱 Water is NOT safe for drinking.")
 
         except Exception as e:
             st.error(str(e))
@@ -250,7 +262,7 @@ with st.container():
 
 
 # =========================================================
-# 📊 CITY COMPARISON PIE CHART 
+# 📊 CITY COMPARISON PIE CHART
 # =========================================================
 st.markdown("<div class='section-title'>📊 Compare PM2.5 Across Cities</div>", unsafe_allow_html=True)
 with st.container():
