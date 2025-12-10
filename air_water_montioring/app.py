@@ -25,7 +25,7 @@ st.markdown(
     color: #0a2540;
 }
 .card {
-    background: white;
+    background: #ffffff;
     padding: 24px;
     border-radius: 16px;
     box-shadow: 0 8px 20px rgba(0,0,0,0.12);
@@ -122,12 +122,7 @@ with col2:
             else:
                 row = df_water[df_water["City"] == c2].iloc[0]
                 ph, hardness, solids = row["pH"], row["Hardness"], row["Solids"]
-                st.write("### Water Parameters")
-                st.write({"pH": ph, "Hardness": hardness, "Solids": solids})
-
-                model = joblib.load(os.path.join(BASE_DIR, "models", "water_quality_model.pkl"))
-                pred = map_water_label(model.predict([[ph, hardness, solids]])[0])
-                st.write(f"### Water Quality: {pred}")
+                background: #f5f9ff;: {pred}")
 
         except Exception as e:
             st.error(str(e))
