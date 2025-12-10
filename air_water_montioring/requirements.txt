@@ -6,5 +6,6 @@ joblib
 requests
 altair
 plotly
+streamlit-lottie
 
 
