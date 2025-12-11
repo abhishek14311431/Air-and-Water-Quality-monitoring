@@ -8,103 +8,129 @@ from utils import get_air_quality_for_city
 # ---------------------------------------------------------
 # PAGE CONFIG + GLOBAL STYLE
 # ---------------------------------------------------------
-st.set_page_config(
-    page_title="Air & Water Quality Monitoring",
-    page_icon="🌍",
-    layout="wide",
-)
+st.set_page_config(page_title="Air & Water Quality Monitoring",
+                   page_icon="🌍",
+                   layout="wide")
 
-# ---- CLEAN SKY-BLUE BACKGROUND ----
-st.markdown(
-    """
-    <style>
-        .stApp {
-            background: linear-gradient(180deg, #c9e8ff, #a8d4ff);
-            font-family: 'Segoe UI', sans-serif;
-        }
+st.markdown("""
+<style>
+.stApp {
+    background-color: #dceaff;
+    background-image: linear-gradient(135deg, #e8f1ff 0%, #cfe0ff 100%);
+    font-family: 'Segoe UI', sans-serif;
+}
 
-        .main-title {
-            font-size: 46px;
-            text-align: center;
-            font-weight: 900;
-            color: #05396b;
-            margin-top: -10px;
-            margin-bottom: 20px;
-        }
+.main-title {
+    font-size: 46px;
+    font-weight: 900;
+    color: #0a0a0a;
+    text-align: center;
+}
 
-        .section-title {
-            font-size: 30px;
-            color: #05396b;
-            font-weight: 800;
-            margin-bottom: 10px;
-        }
+.section-title {
+    font-size: 32px;
+    color: #003366;
+    font-weight: 800;
+    margin-top: 20px;
+}
 
-        .tag-box {
-            background: #e7f3ff;
-            padding: 14px;
-            border-radius: 10px;
-            border-left: 5px solid #2a7ae2;
-            margin-bottom: 15px;
-            color: #05396b;
-            font-weight: 600;
-        }
+.card {
+    background: white;
+    padding: 28px;
+    border-radius: 16px;
+    box-shadow: 0 6px 25px rgba(0,0,0,0.12);
+    margin-bottom: 25px;
+}
 
-        .card {
-            background: white;
-            padding: 25px;
-            border-radius: 16px;
-            box-shadow: 0 6px 22px rgba(0,0,0,0.15);
-            margin-bottom: 25px;
-        }
+.tag-box {
+    background: #fff7cc;
+    padding: 14px;
+    border-radius: 12px;
+    text-align: center;
+    font-weight: 700;
+    color: #7a6000;
+    margin-bottom: 12px;
+}
 
-        .metric-good { background:#d5f5d5; padding:10px; border-radius:8px; color:#0c7a0c; font-weight:700; }
-        .metric-moderate { background:#fff3cd; padding:10px; border-radius:8px; color:#a67c00; font-weight:700; }
-        .metric-poor { background:#f8d7da; padding:10px; border-radius:8px; color:#a80000; font-weight:700; }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
+.metric-good {
+    background: #d9ffe3;
+    padding: 12px;
+    border-radius: 10px;
+    color: #075e28;
+    font-weight: 800;
+}
+
+.metric-moderate {
+    background: #fff3cd;
+    padding: 12px;
+    border-radius: 10px;
+    color: #7a5c00;
+    font-weight: 800;
+}
+
+.metric-poor {
+    background: #ffd6d6;
+    padding: 12px;
+    border-radius: 10px;
+    color: #7a0000;
+    font-weight: 800;
+}
+</style>
+""", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
 # TITLE
 # ---------------------------------------------------------
 st.markdown("<div class='main-title'>🌍 Air & Water Quality Monitoring</div>", unsafe_allow_html=True)
-
+st.write("Real-time pollution, weather data & ML predictions for health safety.")
 
 # ---------------------------------------------------------
 # LOAD WATER DATA
 # ---------------------------------------------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 water_path = os.path.join(BASE_DIR, "data", "water_quality_cities.csv")
+
 df_water = pd.read_csv(water_path)
 df_water.columns = df_water.columns.str.lower().str.replace(" ", "_")
 
-CITY_ALIASES = {
-    "bangalore": "bengaluru",
-    "banglore": "bengaluru",
-    "bombay": "mumbai",
-}
+CITY_ALIASES = {"bangalore": "bengaluru", "banglore": "bengaluru", "bombay": "mumbai"}
 
-# AQI category from pollutants
+
+# ---------------------------------------------------------
+# AQI CATEGORY CALCULATION
+# ---------------------------------------------------------
 def aqi_category(pm25, pm10, no2):
-    if pm25 <= 30 and pm10 <= 50 and no2 <= 40:
-        return "Good"
-    elif pm25 <= 60 and pm10 <= 100 and no2 <= 80:
-        return "Moderate"
-    else:
-        return "Poor"
+    score = 0
+    if pm25 > 60: score += 1
+    if pm10 > 100: score += 1
+    if no2 > 80: score += 1
+
+    return "Good" if score == 0 else "Moderate" if score == 1 else "Poor"
+
+
+# WEATHER ICONS
+def weather_icon(name):
+    icons = {
+        "Clear": "🌞",
+        "Clouds": "☁",
+        "Rain": "🌧",
+        "Thunderstorm": "⛈",
+        "Snow": "❄",
+        "Drizzle": "🌦",
+        "Mist": "🌫",
+        "Haze": "🌫",
+        "Fog": "🌫"
+    }
+    return icons.get(name, "🌍")
 
 
 # =========================================================
-# 🌫️ AIR QUALITY SECTION
+# 🌫 AIR QUALITY SECTION
 # =========================================================
 st.markdown("<div class='section-title'>🌫️ Air Quality</div>", unsafe_allow_html=True)
 
-# Tagline box
-st.markdown(
-    "<div class='tag-box'>🌬️ The air you breathe affects your health. Track pollution levels & stay safe.</div>",
-    unsafe_allow_html=True,
-)
+st.markdown("<div class='tag-box'>🌬️ Track real-time air pollution and weather to stay protected.</div>",
+            unsafe_allow_html=True)
 
 with st.container():
     st.markdown("<div class='card'>", unsafe_allow_html=True)
@@ -114,37 +140,40 @@ with st.container():
     if st.button("Fetch Air Quality"):
         try:
             city_fixed = CITY_ALIASES.get(city_air.lower().strip(), city_air)
-            pollutants, weather, _ = get_air_quality_for_city(city_fixed)
+
+            pollutants, weather = get_air_quality_for_city(city_fixed)
 
             st.subheader(f"Air Quality in {city_fixed.title()}")
 
             cols = st.columns(3)
-            pollutant_labels = {
+            labels = {
                 "pm2_5": "PM2.5",
                 "pm10": "PM10",
                 "no2": "NO₂",
                 "so2": "SO₂",
                 "o3": "O₃",
-                "co": "CO",
+                "co": "CO"
             }
 
-            for i, key in enumerate(pollutants.keys()):
-                cols[i % 3].metric(
-                    pollutant_labels[key],
-                    round(pollutants[key], 2)
-                )
+            for i, key in enumerate(pollutants):
+                cols[i % 3].metric(labels[key], round(pollutants[key], 2))
 
-            category = aqi_category(
-                pollutants["pm2_5"], pollutants["pm10"], pollutants["no2"]
-            )
+            # WEATHER SECTION
+            st.subheader("🌦 Current Weather")
+            wcols = st.columns(3)
+            wcols[0].metric(f"{weather_icon(weather['condition'])} Condition", weather["condition"])
+            wcols[1].metric("🌡 Temperature (°C)", weather["temp"])
+            wcols[2].metric("💧 Humidity (%)", weather["humidity"])
 
-            # Category box
+            # AQI CATEGORY
+            category = aqi_category(pollutants["pm2_5"], pollutants["pm10"], pollutants["no2"])
+
             if category == "Good":
-                st.markdown("<div class='metric-good'>🌿 Air Quality: GOOD — Safe to breathe</div>", unsafe_allow_html=True)
+                st.markdown("<div class='metric-good'>🌿 Good — Air is safe.</div>", unsafe_allow_html=True)
             elif category == "Moderate":
-                st.markdown("<div class='metric-moderate'>😷 Air Quality: MODERATE — Sensitive individuals should be cautious</div>", unsafe_allow_html=True)
+                st.markdown("<div class='metric-moderate'>😷 Moderate — Sensitive individuals should take care.</div>", unsafe_allow_html=True)
             else:
-                st.markdown("<div class='metric-poor'>🚨 Air Quality: POOR — Avoid outdoor exposure</div>", unsafe_allow_html=True)
+                st.markdown("<div class='metric-poor'>🚨 Poor — Avoid outdoor exposure!</div>", unsafe_allow_html=True)
 
         except Exception as e:
             st.error(str(e))
@@ -157,11 +186,8 @@ with st.container():
 # =========================================================
 st.markdown("<div class='section-title'>💧 Water Quality</div>", unsafe_allow_html=True)
 
-# Tagline box
-st.markdown(
-    "<div class='tag-box'>💧 Clean water is essential for a healthy life. Check safety levels below.</div>",
-    unsafe_allow_html=True,
-)
+st.markdown("<div class='tag-box'>💧 Check drinking water safety using ML predictions.</div>",
+            unsafe_allow_html=True)
 
 with st.container():
     st.markdown("<div class='card'>", unsafe_allow_html=True)
@@ -170,28 +196,34 @@ with st.container():
 
     if st.button("Fetch Water Quality"):
         try:
-            c2 = CITY_ALIASES.get(city_water.lower().strip(), city_water).title()
+            fixed = CITY_ALIASES.get(city_water.lower().strip(), city_water).lower()
 
-            if c2.lower() not in df_water["city"].astype(str).str.lower().values:
+            if fixed not in df_water["city"].str.lower().values:
                 st.error("City not found in water dataset.")
             else:
-                row = df_water[df_water["city"].str.lower() == c2.lower()].iloc[0]
+                row = df_water[df_water["city"].str.lower() == fixed].iloc[0]
 
-                st.subheader(f"Water Quality in {c2}")
+                parameters = {
+                    "pH": row["ph"],
+                    "Hardness": row["hardness"],
+                    "Solids": row["solids"],
+                }
+
+                st.subheader(f"Water Parameters — {city_water.title()}")
 
                 cols = st.columns(3)
-                parameters = ["ph", "hardness", "solids"]
+                for i, (k, v) in enumerate(parameters.items()):
+                    cols[i % 3].metric(k, round(v, 2))
 
-                for i, key in enumerate(parameters):
-                    cols[i % 3].metric(key.upper(), round(row[key], 2))
-
+                # ML prediction (3 features only)
                 model = joblib.load(os.path.join(BASE_DIR, "models", "water_quality_model.pkl"))
-                pred = model.predict([[row["ph"], row["hardness"], row["solids"]]])[0]
+                pred = model.predict([[parameters["pH"], parameters["Hardness"], parameters["Solids"]]])[0]
+                label = "Drinkable" if pred == 1 else "Not Drinkable"
 
-                if pred == 1:
-                    st.markdown("<div class='metric-good'>💧 Water is SAFE for drinking</div>", unsafe_allow_html=True)
+                if label == "Drinkable":
+                    st.markdown("<div class='metric-good'>💧 Water is safe to drink.</div>", unsafe_allow_html=True)
                 else:
-                    st.markdown("<div class='metric-poor'>🚱 Water is NOT SAFE for drinking</div>", unsafe_allow_html=True)
+                    st.markdown("<div class='metric-poor'>🚱 Water is NOT safe for drinking.</div>", unsafe_allow_html=True)
 
         except Exception as e:
             st.error(str(e))
@@ -200,31 +232,35 @@ with st.container():
 
 
 # =========================================================
-# 📊 COMPARISON BETWEEN TWO CITIES
+# 📊 CITY COMPARISON
 # =========================================================
-st.markdown("<div class='section-title'>📊 Compare PM2.5 Levels Between Cities</div>", unsafe_allow_html=True)
+st.markdown("<div class='section-title'>📊 Compare PM2.5 Between Cities</div>", unsafe_allow_html=True)
 
 with st.container():
     st.markdown("<div class='card'>", unsafe_allow_html=True)
 
     c1 = st.text_input("City 1")
     c2 = st.text_input("City 2")
+    c3 = st.text_input("City 3 (optional)")
 
-    if st.button("Compare"):
+    if st.button("Compare Cities"):
         try:
-            p1, _, _ = get_air_quality_for_city(c1)
-            p2, _, _ = get_air_quality_for_city(c2)
+            cities = [c1, c2, c3]
+            labels = []
+            values = []
 
-            df = pd.DataFrame({
-                "City": [c1.title(), c2.title()],
-                "PM2.5": [p1["pm2_5"], p2["pm2_5"]],
-            })
+            for city in cities:
+                if city.strip():
+                    fx = CITY_ALIASES.get(city.lower().strip(), city)
+                    pollutants, _ = get_air_quality_for_city(fx)
+                    labels.append(fx.title())
+                    values.append(pollutants["pm2_5"])
 
-            fig = px.bar(df, x="City", y="PM2.5", color="City", title="PM2.5 Comparison")
+            df = pd.DataFrame({"City": labels, "PM2.5": values})
+            fig = px.pie(df, names="City", values="PM2.5", title="PM2.5 Comparison Between Cities")
             st.plotly_chart(fig)
 
         except Exception as e:
             st.error(str(e))
 
     st.markdown("</div>", unsafe_allow_html=True)
-
