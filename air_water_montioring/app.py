@@ -66,7 +66,6 @@ st.markdown("""
 # ---------------------------------------------------------
 st.markdown("<h1 style='text-align:center; color:#05396b;'>🌍 Air & Water Quality Monitoring</h1>", unsafe_allow_html=True)
 
-
 # ---------------------------------------------------------
 # LOAD WATER DATA
 # ---------------------------------------------------------
@@ -81,7 +80,7 @@ CITY_ALIASES = {
 }
 
 # ---------------------------------------------------------
-# AIR QUALITY CATEGORY
+# AIR QUALITY CLASSIFICATION
 # ---------------------------------------------------------
 def classify_air(pm25, pm10, no2):
     if pm25 <= 30 and pm10 <= 50 and no2 <= 40:
@@ -90,15 +89,36 @@ def classify_air(pm25, pm10, no2):
         return "Moderate"
     return "Poor"
 
-
 def weather_icon(temp, humidity):
     if temp > 30:
-        return "☀️ Hot"
+        return f"☀️ Hot ({temp}°C)"
     elif humidity > 80:
-        return "🌧️ Humid/Rainy"
+        return f"🌧️ Humid ({humidity}%)"
     elif 20 <= temp <= 30:
-        return "⛅ Pleasant"
-    return "☁️ Cool/Cloudy"
+        return f"⛅ Pleasant ({temp}°C)"
+    return f"☁️ Cool ({temp}°C)"
+
+# ---------------------------------------------------------
+# WATER PARAMETER SAFETY LIMITS
+# ---------------------------------------------------------
+water_limits = {
+    "pH": (6.5, 8.5),
+    "Hardness": (150, 300),
+    "Solids": (300, 1200),
+    "Chloramines": (2, 4),
+    "Organic Carbon": (2, 4),
+    "Sulfate": (100, 250),
+    "Conductivity": (250, 750),
+    "Trihalomethanes": (40, 80),
+    "Turbidity": (1, 5),
+}
+
+def water_icon(val, low, high):
+    if val <= low:
+        return "🟢"
+    elif val <= high:
+        return "🟡"
+    return "🔴"
 
 
 # ---------------------------------------------------------
@@ -107,6 +127,22 @@ def weather_icon(temp, humidity):
 st.markdown("<div class='centered'>", unsafe_allow_html=True)
 
 st.subheader("🌫️ Air Quality")
+
+# ⭐ AIR TAGLINE BOX
+st.markdown("""
+<div style="
+    background:#e8f4ff;
+    padding:15px;
+    border-radius:10px;
+    border-left:5px solid #2980b9;
+    font-weight:600;
+    margin-top:10px;
+    margin-bottom:15px;">
+🌬️ The air you breathe shapes your health.  
+Track live pollution levels & stay protected outdoors.
+</div>
+""", unsafe_allow_html=True)
+
 st.markdown("<div class='card'>", unsafe_allow_html=True)
 
 city_air = st.text_input("Enter city name for Air Quality")
@@ -119,8 +155,7 @@ if st.button("Fetch Air Quality"):
         st.markdown(f"### Live Air Quality — {c.title()}")
 
         # Weather icon
-        w_icon = weather_icon(data["temp"], data["humidity"])
-        st.metric("Weather", w_icon)
+        st.metric("Weather", weather_icon(data["temp"], data["humidity"]))
 
         pollutants = {
             "PM2.5": data["pm2_5"],
@@ -140,7 +175,7 @@ if st.button("Fetch Air Quality"):
             "CO": (200, 400),
         }
 
-        def icon(val, low, mid):
+        def air_icon(val, low, mid):
             if val <= low: return "🟢"
             if val <= mid: return "🟡"
             return "🔴"
@@ -148,7 +183,7 @@ if st.button("Fetch Air Quality"):
         cols = st.columns(3)
         for i, (name, value) in enumerate(pollutants.items()):
             low, mid = limits[name]
-            symbol = icon(value, low, mid)
+            symbol = air_icon(value, low, mid)
             cols[i % 3].metric(f"{symbol} {name}", round(value, 2))
 
         # Category box
@@ -157,20 +192,36 @@ if st.button("Fetch Air Quality"):
         if category == "Good":
             st.markdown("<div class='air-box-good'>🌿 Good Air — Safe to breathe.</div>", unsafe_allow_html=True)
         elif category == "Moderate":
-            st.markdown("<div class='air-box-moderate'>😐 Moderate — Sensitive people limit outdoors.</div>", unsafe_allow_html=True)
+            st.markdown("<div class='air-box-moderate'>😐 Moderate — Sensitive individuals limit outdoor time.</div>", unsafe_allow_html=True)
         else:
-            st.markdown("<div class='air-box-poor'>🚨 Poor — Avoid outdoor activities.</div>", unsafe_allow_html=True)
+            st.markdown("<div class='air-box-poor'>🚨 Poor — Avoid heavy outdoor activity.</div>", unsafe_allow_html=True)
 
     except Exception as e:
         st.error(str(e))
 
-st.markdown("</div>", unsafe_allow_html=True)  # close card
+st.markdown("</div>", unsafe_allow_html=True)
 
 
 # ---------------------------------------------------------
-# 💧 WATER QUALITY SECTION (CENTER)
+# 💧 WATER QUALITY SECTION
 # ---------------------------------------------------------
 st.subheader("💧 Water Quality")
+
+# ⭐ WATER TAGLINE BOX
+st.markdown("""
+<div style="
+    background:#e8fff1;
+    padding:15px;
+    border-radius:10px;
+    border-left:5px solid #27ae60;
+    font-weight:600;
+    margin-top:10px;
+    margin-bottom:15px;">
+💧 Clean water is essential for a healthy life.  
+Check purity levels & ensure safe drinking water.
+</div>
+""", unsafe_allow_html=True)
+
 st.markdown("<div class='card'>", unsafe_allow_html=True)
 
 city_water = st.text_input("Enter city name for Water Quality")
@@ -183,7 +234,6 @@ if st.button("Fetch Water Quality"):
             st.error("City not found in water dataset.")
         else:
             row = df_water[df_water["city"].str.lower() == c2.lower()].iloc[0]
-
             st.markdown(f"### Water Quality — {c2}")
 
             metrics = {
@@ -201,8 +251,11 @@ if st.button("Fetch Water Quality"):
             cols = st.columns(3)
             for i, (name, value) in enumerate(metrics.items()):
                 if pd.notna(value):
-                    cols[i % 3].metric(name, round(value, 2))
+                    low, high = water_limits[name]
+                    symbol = water_icon(value, low, high)
+                    cols[i % 3].metric(f"{symbol} {name}", round(value, 2))
 
+            # ML PREDICTION
             model_w = joblib.load(os.path.join(BASE_DIR, "models", "water_quality_model.pkl"))
             X = [[row["ph"], row["hardness"], row["solids"]]]
             pred = model_w.predict(X)[0]
@@ -217,4 +270,35 @@ if st.button("Fetch Water Quality"):
         st.error(str(e))
 
 st.markdown("</div>", unsafe_allow_html=True)
-st.markdown("</div>", unsafe_allow_html=True)  # centered end
+
+
+# ---------------------------------------------------------
+# 📊 CITY COMPARISON
+# ---------------------------------------------------------
+st.subheader("📊 Compare Air Quality Between Cities")
+st.markdown("<div class='card'>", unsafe_allow_html=True)
+
+c1 = st.text_input("City 1")
+c2 = st.text_input("City 2")
+c3 = st.text_input("City 3 (optional)")
+
+if st.button("Compare Cities"):
+    try:
+        labels, pm_values = [], []
+
+        for city in [c1, c2, c3]:
+            if city.strip():
+                fixed = CITY_ALIASES.get(city.lower().strip(), city)
+                aq = get_air_quality_for_city(fixed)
+                labels.append(fixed.title())
+                pm_values.append(aq["pm2_5"])
+
+        df = pd.DataFrame({"City": labels, "PM2.5": pm_values})
+        fig = px.bar(df, x="City", y="PM2.5", color="City", 
+                     title="PM2.5 Comparison Between Cities")
+        st.plotly_chart(fig)
+
+    except Exception as e:
+        st.error(str(e))
+
+st.markdown("</div>", unsafe_allow_html=True)
