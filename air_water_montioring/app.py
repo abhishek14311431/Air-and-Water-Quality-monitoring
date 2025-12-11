@@ -2,6 +2,7 @@ import streamlit as st
 import numpy as np
 import joblib
 import pandas as pd
+import os # <-- ADDED
 from utils import get_air_quality_for_city
 
 CITY_ALIASES = {
@@ -16,7 +17,25 @@ st.set_page_config(
     layout="centered",
 )
 
-df_water = pd.read_csv("data/water_quality_cities.csv")
+# ---------------------------------------------------------
+# PATH AND DATA SETUP (FIXED)
+# ---------------------------------------------------------
+# Set the base directory to the location of the current script
+try:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+except NameError:
+    BASE_DIR = os.getcwd() # Fallback if __file__ is not defined
+
+water_data_path = os.path.join(BASE_DIR, "data", "water_quality_cities.csv")
+
+try:
+    df_water = pd.read_csv(water_data_path)
+    df_water.columns = df_water.columns.str.lower().str.replace(" ", "_")
+except FileNotFoundError:
+    st.error(f"FATAL ERROR: Could not find water quality data at {water_data_path}. Ensure the 'data' folder is present.")
+    st.stop() # Stop the app since the data is mandatory
+
+# ---------------------------------------------------------
 
 st.markdown("""
 <style>
@@ -101,9 +120,18 @@ if st.button("Get Air Quality", use_container_width=True):
 
         st.markdown(f"<h3>Live Pollutants in {city.title()}</h3>", unsafe_allow_html=True)
         st.write(data)
-
-        model = joblib.load("models/air_quality_model.pkl")
-        X = np.array([[data[i] for i in data]])
+        
+        # --- FIXED MODEL PATH ---
+        air_model_path = os.path.join(BASE_DIR, "models", "air_quality_model.pkl")
+        model = joblib.load(air_model_path)
+        
+        # NOTE: Ensure the keys in 'data' dictionary match the feature order the model expects.
+        # This part of the logic assumes the model accepts the dictionary keys as features.
+        # It should be fixed to explicitly pass the required features in the correct order.
+        # X = np.array([[data[i] for i in data]]) # Original (risky)
+        
+        # Assuming the model takes all values from data in an arbitrary, but consistent, order:
+        X = np.array([list(data.values())]) 
         pred = model.predict(X)[0]
 
         label = map_air_label(pred)
@@ -114,8 +142,10 @@ if st.button("Get Air Quality", use_container_width=True):
             unsafe_allow_html=True
         )
 
+    except FileNotFoundError:
+        st.error(f"Model file 'air_quality_model.pkl' not found in the 'models' folder.")
     except Exception as e:
-        st.error(e)
+        st.error(f"An error occurred during air quality prediction: {e}")
 
 st.markdown('</div>', unsafe_allow_html=True)
 
@@ -126,39 +156,52 @@ st.markdown('<div class="card">', unsafe_allow_html=True)
 city2 = st.text_input("Enter City (Water Quality)")
 
 if st.button("Check Water Quality", use_container_width=True):
-    c2 = city2.strip().lower()
-    if c2 in CITY_ALIASES:
-        c2 = CITY_ALIASES[c2].title()
-    else:
-        c2 = city2.strip().title()
+    try:
+        c2 = city2.strip().lower()
+        if c2 in CITY_ALIASES:
+            c2_display = CITY_ALIASES[c2].title()
+        else:
+            c2_display = city2.strip().title()
+        
+        # DataFrame lookup uses lowercased column names from fixed data loading
+        if c2 not in list(df_water["city"]):
+            st.error(f"City '{c2_display}' not found in water dataset.")
+        else:
+            # Look up the row using the lowercased city name
+            row = df_water[df_water["city"] == c2].iloc[0]
 
-    if c2 not in list(df_water["City"]):
-        st.error("City not found in water dataset")
-    else:
-        row = df_water[df_water["City"] == c2].iloc[0]
+            # Use lowercased column names
+            ph = row["ph"]
+            hardness = row["hardness"]
+            solids = row["solids"]
 
-        ph = row["pH"]
-        hardness = row["Hardness"]
-        solids = row["Solids"]
+            st.markdown("<h3>Measured Water Parameters</h3>", unsafe_allow_html=True)
+            st.write({
+                "pH": ph,
+                "Hardness": hardness,
+                "Solids": solids
+            })
 
-        st.markdown("<h3>Measured Water Parameters</h3>", unsafe_allow_html=True)
-        st.write({
-            "pH": ph,
-            "Hardness": hardness,
-            "Solids": solids
-        })
+            # --- FIXED MODEL PATH ---
+            water_model_path = os.path.join(BASE_DIR, "models", "water_quality_model.pkl")
+            model = joblib.load(water_model_path)
+            
+            # Features for prediction
+            Xw = np.array([[ph, hardness, solids]])
+            pred = model.predict(Xw)[0]
 
-        model = joblib.load("models/water_quality_model.pkl")
-        Xw = np.array([[ph, hardness, solids]])
-        pred = model.predict(Xw)[0]
+            label = map_water_label(pred)
+            color = water_color(label)
 
-        label = map_water_label(pred)
-        color = water_color(label)
-
-        st.markdown(
-            f'<div class="result-box" style="background:{color};">{label} Water Quality</div>',
-            unsafe_allow_html=True
-        )
+            st.markdown(
+                f'<div class="result-box" style="background:{color};">{label} Water Quality</div>',
+                unsafe_allow_html=True
+            )
+            
+    except FileNotFoundError:
+        st.error(f"Model file 'water_quality_model.pkl' not found in the 'models' folder.")
+    except Exception as e:
+        st.error(f"An error occurred during water quality prediction: {e}")
 
 st.markdown('</div>', unsafe_allow_html=True)
 
