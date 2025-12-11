@@ -7,10 +7,13 @@ import plotly.express as px
 
 # ---------------------------------------------------------
 # MOCK UTILS FUNCTIONS (Placeholder for real API calls)
+# NOTE: Data is generated randomly for each fetch, which is why it changes.
+# Replace these with real API calls for static, live data.
 # ---------------------------------------------------------
 def get_air_quality_for_city(city_name):
     """MOCK: Returns pollutant data."""
     city_name = city_name.lower().strip()
+    # Mock data ranges
     if "bengaluru" in city_name or "mumbai" in city_name or "delhi" in city_name:
         return {
             "pm2_5": np.random.uniform(40, 55),
@@ -33,22 +36,16 @@ def get_air_quality_for_city(city_name):
         return {}
 
 def get_weather_for_city(city_name):
-    """
-    MOCK FUNCTION: Returns temperature and humidity.
-    You would replace this with a call to a Weather API (e.g., OpenWeatherMap).
-    """
+    """MOCK FUNCTION: Returns temperature and humidity."""
     city_name = city_name.lower().strip()
     
-    # Generate realistic-looking data based on city
     if "mumbai" in city_name or "bengaluru" in city_name:
         temp = np.random.uniform(25, 32)
         humidity = np.random.randint(60, 85)
     elif "delhi" in city_name or "jalandhar" in city_name:
-        # Assuming winter time, adjust ranges as needed for your application
         temp = np.random.uniform(18, 26)
         humidity = np.random.randint(40, 65)
     else:
-        # Fallback data
         temp = np.random.uniform(20, 30)
         humidity = np.random.randint(50, 75)
         
@@ -57,18 +54,20 @@ def get_weather_for_city(city_name):
         "humidity_percent": humidity
     }
 # ---------------------------------------------------------
-# END MOCK UTILS
-# ---------------------------------------------------------
 
 
 # ---------------------------------------------------------
-# PAGE CONFIG
+# PAGE CONFIG AND BASE PATH SETUP
 # ---------------------------------------------------------
 st.set_page_config(
     page_title="Air & Water Quality Monitoring",
     page_icon="🌍",
     layout="wide",
 )
+
+# Use the directory of the current file as the base directory for robust path handling
+BASE_DIR = os.path.dirname(os.path.abspath(__file__)) if '__file__' in locals() else os.getcwd()
+water_path = os.path.join(BASE_DIR, "data", "water_quality_cities.csv")
 
 # ---------------------------------------------------------
 # GLOBAL CSS + BACKGROUND
@@ -130,19 +129,17 @@ st.markdown("""
 st.markdown("<div class='main-title'>🌍 Air & Water Quality Monitoring</div>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# LOAD WATER DATA
+# LOAD WATER DATA (FIXED PATHS)
 # ---------------------------------------------------------
-BASE_DIR = os.path.dirname(os.path.abspath(__file__)) if '__file__' in locals() else os.getcwd()
-water_path = os.path.join(BASE_DIR, "data", "water_quality_cities.csv")
-
 try:
     df_water = pd.read_csv(water_path)
     df_water.columns = df_water.columns.str.lower().str.replace(" ", "_")
 except FileNotFoundError:
-    st.error("Error: water_quality_cities.csv not found. Using empty data frame.")
-    df_water = pd.DataFrame({"city": [], "ph": [], "hardness": [], "solids": [], 
-                             "chloramines": [], "sulfate": [], "conductivity": [], 
-                             "organic_carbon": [], "trihalomethanes": [], "turbidity": []})
+    st.error(f"Error: Data file 'water_quality_cities.csv' not found at {water_path}. Please check your 'data' folder deployment.")
+    df_water = pd.DataFrame({"city": [], "ph": [], "hardness": [], "solids": []}) # Minimal dummy for flow control
+except Exception as e:
+    st.error(f"Error loading water data: {e}")
+    df_water = pd.DataFrame({"city": [], "ph": [], "hardness": [], "solids": []})
     
 CITY_ALIASES = {
     "bangalore": "bengaluru",
@@ -162,7 +159,7 @@ def emoji_status(value, low, med):
     return "🔴 Poor"
 
 # ---------------------------------------------------------
-# 🌫️ AIR QUALITY SECTION (WITH WEATHER INTEGRATION)
+# 🌫️ AIR QUALITY SECTION (WITH WEATHER)
 # ---------------------------------------------------------
 st.markdown("<div class='section-title'>🌫️ Air Quality & Weather</div>", unsafe_allow_html=True)
 
@@ -179,21 +176,21 @@ with st.container():
 
     if st.button("Fetch Data"):
         try:
-            c = CITY_ALIASES.get(city_air.lower().strip(), city_air).title() # Title case for display
+            c = CITY_ALIASES.get(city_air.lower().strip(), city_air).title()
             
             # --- 1. Fetch Air Quality Data ---
             pollutants = get_air_quality_for_city(c)
             air_data_found = isinstance(pollutants, dict) and pollutants
 
-            # --- 2. Fetch Weather Data (New Addition) ---
+            # --- 2. Fetch Weather Data ---
             weather = get_weather_for_city(c)
             
             # ---------------------------------------------
-            # Display Weather (New Section)
+            # Display Weather 🌡️ 💧
             # ---------------------------------------------
             st.subheader(f"Current Conditions in {c}")
             
-            temp_col, humid_col, *rest = st.columns(3) # Use two columns for weather
+            temp_col, humid_col, *rest = st.columns(3)
 
             with temp_col:
                 st.markdown(f"""
@@ -211,7 +208,7 @@ with st.container():
                 </div>
                 """, unsafe_allow_html=True)
             
-            st.markdown("---") # Separator between weather and pollution
+            st.markdown("---")
 
             # ---------------------------------------------
             # Display Air Quality
@@ -222,12 +219,8 @@ with st.container():
                 st.subheader(f"Pollutant Levels in {c}")
 
                 limits = {
-                    "pm2_5": (30, 60),
-                    "pm10": (50, 100),
-                    "no2":  (40, 80),
-                    "so2":  (20, 80),
-                    "o3":   (50, 100),
-                    "co":   (200, 400)
+                    "pm2_5": (30, 60), "pm10": (50, 100), "no2":  (40, 80), 
+                    "so2":  (20, 80), "o3": (50, 100), "co": (200, 400)
                 }
 
                 cols = st.columns(3)
@@ -247,7 +240,7 @@ with st.container():
                             """, unsafe_allow_html=True)
                         i += 1
 
-                # ------- AI Category (based on PM2.5) -------
+                # ------- AQI Category (based on PM2.5) -------
                 st.markdown("---") 
                 if "pm2_5" in pollutants:
                     pm = pollutants["pm2_5"]
@@ -267,7 +260,7 @@ with st.container():
     st.markdown("</div>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 💧 WATER QUALITY SECTION (Unchanged from previous fix)
+# 💧 WATER QUALITY SECTION
 # ---------------------------------------------------------
 st.markdown("<div class='section-title'>💧 Water Quality</div>", unsafe_allow_html=True)
 
@@ -284,35 +277,31 @@ with st.container():
 
     if st.button("Fetch Water Quality"):
         try:
-            c2 = CITY_ALIASES.get(city_water.lower().strip(), city_water)
+            c2_input = city_water.lower().strip()
+            c2_lookup = CITY_ALIASES.get(c2_input, c2_input)
 
-            if c2.lower() not in df_water["city"].str.lower().values:
+            # Check if city exists using lowercased names (FIXED lookup)
+            if c2_lookup not in df_water["city"].str.lower().values:
                 st.error(f"City **{city_water.title()}** not found in water dataset.")
             else:
-                row = df_water[df_water["city"].str.lower() == c2.lower()].iloc[0]
+                row = df_water[df_water["city"].str.lower() == c2_lookup].iloc[0]
+                c2_display = row["city"].title()
 
-                st.subheader(f"Water Parameters — {c2.title()}")
+                st.subheader(f"Water Parameters — {c2_display}")
 
                 water_limits = {
-                    "ph": (6.5, 8.5),
-                    "hardness": (150, 300),
-                    "solids": (300, 600),
-                    "chloramines": (2, 4),
-                    "sulfate": (100, 250),
-                    "conductivity": (200, 400),
-                    "organic_carbon": (2, 4),
-                    "trihalomethanes": (40, 80),
-                    "turbidity": (1, 3)
+                    "ph": (6.5, 8.5), "hardness": (150, 300), "solids": (300, 600),
+                    "chloramines": (2, 4), "sulfate": (100, 250), "conductivity": (200, 400),
+                    "organic_carbon": (2, 4), "trihalomethanes": (40, 80), "turbidity": (1, 3)
                 }
 
                 cols = st.columns(3)
 
                 for i, key in enumerate(water_limits.keys()):
-                    if key in row: 
+                    if key in row:
                         val = row[key]
                         low, med = water_limits[key]
-                        
-                        status = emoji_status(val, low, med) 
+                        status = emoji_status(val, low, med)
                         emoji = status.split()[0]
 
                         with cols[i % 3]:
@@ -323,7 +312,7 @@ with st.container():
                                 </div>
                             """, unsafe_allow_html=True)
 
-                # ------- ML prediction -------
+                # ------- ML prediction (FIXED PATHS) -------
                 st.markdown("---")
                 
                 model_path = os.path.join(BASE_DIR, "models", "water_quality_model.pkl")
@@ -347,7 +336,7 @@ with st.container():
     st.markdown("</div>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 📊 CITY COMPARISON (PM2.5) (Unchanged from previous fix)
+# 📊 CITY COMPARISON (PM2.5)
 # ---------------------------------------------------------
 st.markdown("<div class='section-title'>📊 Compare PM2.5 Across Cities</div>", unsafe_allow_html=True)
 
@@ -364,7 +353,6 @@ with st.container():
                 st.warning("Please enter at least one city name.")
             else:
                 names, values = [], []
-                
                 cities_to_compare = input_cities[:3]
 
                 for c in cities_to_compare:
