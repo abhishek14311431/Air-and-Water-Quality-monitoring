@@ -6,49 +6,59 @@ import os
 import plotly.express as px
 
 # ---------------------------------------------------------
-# MOCK UTILS FUNCTION (Replace this with your real API call)
+# MOCK UTILS FUNCTIONS (Placeholder for real API calls)
 # ---------------------------------------------------------
 def get_air_quality_for_city(city_name):
-    """
-    MOCK FUNCTION: Replicates the expected output of an air quality API call.
-    
-    You MUST replace this with your actual function that calls a real API
-    (e.g., OpenAQ, waqi.info, etc.) to get live data.
-    
-    For demonstration purposes, it returns hardcoded data based on city name.
-    If the city is 'Jalandhar', it returns mock 'Poor' data.
-    """
+    """MOCK: Returns pollutant data."""
     city_name = city_name.lower().strip()
-
-    # --- Scenario 1: City with Good/Moderate Air ---
     if "bengaluru" in city_name or "mumbai" in city_name or "delhi" in city_name:
         return {
-            "pm2_5": np.random.uniform(40, 55), # Moderate
+            "pm2_5": np.random.uniform(40, 55),
             "pm10": np.random.uniform(70, 95),
             "no2": np.random.uniform(30, 50),
             "so2": np.random.uniform(10, 25),
             "o3": np.random.uniform(45, 65),
             "co": np.random.uniform(250, 350)
         }
-    
-    # --- Scenario 2: City with Poor Air (e.g., Jalandhar) ---
     elif "jalandhar" in city_name:
         return {
-            "pm2_5": np.random.uniform(70, 150), # Poor
+            "pm2_5": np.random.uniform(70, 150),
             "pm10": np.random.uniform(120, 250),
             "no2": np.random.uniform(60, 100),
             "so2": np.random.uniform(50, 150),
             "o3": np.random.uniform(30, 70),
             "co": np.random.uniform(500, 800)
         }
-
-    # --- Scenario 3: Failed Retrieval ---
-    # In a real app, this is what happens when the API call fails or returns no data.
-    # The main app code is now protected against this returning None or an error tuple.
     else:
-        # Returning an empty dictionary is the safest way to handle failure
-        # as the main code checks for `if not isinstance(pollutants, dict) or not pollutants:`
         return {}
+
+def get_weather_for_city(city_name):
+    """
+    MOCK FUNCTION: Returns temperature and humidity.
+    You would replace this with a call to a Weather API (e.g., OpenWeatherMap).
+    """
+    city_name = city_name.lower().strip()
+    
+    # Generate realistic-looking data based on city
+    if "mumbai" in city_name or "bengaluru" in city_name:
+        temp = np.random.uniform(25, 32)
+        humidity = np.random.randint(60, 85)
+    elif "delhi" in city_name or "jalandhar" in city_name:
+        # Assuming winter time, adjust ranges as needed for your application
+        temp = np.random.uniform(18, 26)
+        humidity = np.random.randint(40, 65)
+    else:
+        # Fallback data
+        temp = np.random.uniform(20, 30)
+        humidity = np.random.randint(50, 75)
+        
+    return {
+        "temperature_c": round(temp, 1),
+        "humidity_percent": humidity
+    }
+# ---------------------------------------------------------
+# END MOCK UTILS
+# ---------------------------------------------------------
 
 
 # ---------------------------------------------------------
@@ -97,6 +107,20 @@ st.markdown("""
     border-left: 5px solid #0077cc;
     margin-bottom: 15px;
 }
+.weather-metric {
+    text-align: center;
+    padding: 10px 0;
+}
+.weather-metric h3 {
+    font-size: 24px;
+    margin: 0;
+    color: #333;
+}
+.weather-metric p {
+    font-size: 16px;
+    margin: 0;
+    color: #777;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -115,7 +139,7 @@ try:
     df_water = pd.read_csv(water_path)
     df_water.columns = df_water.columns.str.lower().str.replace(" ", "_")
 except FileNotFoundError:
-    st.error("Error: water_quality_cities.csv not found. Please ensure it's in the 'data' folder next to your script.")
+    st.error("Error: water_quality_cities.csv not found. Using empty data frame.")
     df_water = pd.DataFrame({"city": [], "ph": [], "hardness": [], "solids": [], 
                              "chloramines": [], "sulfate": [], "conductivity": [], 
                              "organic_carbon": [], "trihalomethanes": [], "turbidity": []})
@@ -138,9 +162,9 @@ def emoji_status(value, low, med):
     return "🔴 Poor"
 
 # ---------------------------------------------------------
-# 🌫️ AIR QUALITY SECTION (FIXED for robustness)
+# 🌫️ AIR QUALITY SECTION (WITH WEATHER INTEGRATION)
 # ---------------------------------------------------------
-st.markdown("<div class='section-title'>🌫️ Air Quality</div>", unsafe_allow_html=True)
+st.markdown("<div class='section-title'>🌫️ Air Quality & Weather</div>", unsafe_allow_html=True)
 
 st.markdown("""
 <div class="tagline-box">
@@ -151,18 +175,49 @@ st.markdown("""
 with st.container():
     st.markdown("<div class='card'>", unsafe_allow_html=True)
 
-    city_air = st.text_input("Enter city name for Air Quality")
+    city_air = st.text_input("Enter city name for Air Quality and Weather")
 
-    if st.button("Fetch Air Quality"):
+    if st.button("Fetch Data"):
         try:
             c = CITY_ALIASES.get(city_air.lower().strip(), city_air).title() # Title case for display
             
-            # ❗ Fetch Air API (dict of pollutant values) - Uses the function defined above
+            # --- 1. Fetch Air Quality Data ---
             pollutants = get_air_quality_for_city(c)
+            air_data_found = isinstance(pollutants, dict) and pollutants
 
-            # --- CRITICAL FIX: Check if pollutants is a dictionary and not empty ---
-            if not isinstance(pollutants, dict) or not pollutants:
-                st.error(f"❌ Could not retrieve air quality data for **{c}**. Please check the city name or verify the connection.")
+            # --- 2. Fetch Weather Data (New Addition) ---
+            weather = get_weather_for_city(c)
+            
+            # ---------------------------------------------
+            # Display Weather (New Section)
+            # ---------------------------------------------
+            st.subheader(f"Current Conditions in {c}")
+            
+            temp_col, humid_col, *rest = st.columns(3) # Use two columns for weather
+
+            with temp_col:
+                st.markdown(f"""
+                <div class='weather-metric'>
+                    <h3>🌡️ {weather['temperature_c']}°C</h3>
+                    <p>Temperature</p>
+                </div>
+                """, unsafe_allow_html=True)
+                
+            with humid_col:
+                st.markdown(f"""
+                <div class='weather-metric'>
+                    <h3>💧 {weather['humidity_percent']}%</h3>
+                    <p>Humidity</p>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            st.markdown("---") # Separator between weather and pollution
+
+            # ---------------------------------------------
+            # Display Air Quality
+            # ---------------------------------------------
+            if not air_data_found:
+                st.error(f"❌ Could not retrieve pollutant data for **{c}**.")
             else:
                 st.subheader(f"Pollutant Levels in {c}")
 
@@ -178,7 +233,7 @@ with st.container():
                 cols = st.columns(3)
                 i = 0
                 for key in pollutants.keys():
-                    if key in limits: # Only display pollutants we have limits for
+                    if key in limits:
                         low, med = limits[key]
                         status = emoji_status(pollutants[key], low, med)
                         emoji = status.split()[0]
@@ -196,7 +251,6 @@ with st.container():
                 st.markdown("---") 
                 if "pm2_5" in pollutants:
                     pm = pollutants["pm2_5"]
-
                     if pm <= 30:
                         st.success("🟢 **Air Quality Index: Good** — Air is safe to breathe.")
                     elif pm <= 60:
@@ -213,7 +267,7 @@ with st.container():
     st.markdown("</div>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 💧 WATER QUALITY SECTION
+# 💧 WATER QUALITY SECTION (Unchanged from previous fix)
 # ---------------------------------------------------------
 st.markdown("<div class='section-title'>💧 Water Quality</div>", unsafe_allow_html=True)
 
@@ -258,7 +312,6 @@ with st.container():
                         val = row[key]
                         low, med = water_limits[key]
                         
-                        # Simplified status check 
                         status = emoji_status(val, low, med) 
                         emoji = status.split()[0]
 
@@ -281,7 +334,6 @@ with st.container():
                 else:
                     model_w = joblib.load(model_path)
                     
-                    # Assuming the model uses pH, Hardness, and Solids for prediction
                     pred_raw = model_w.predict([[row["ph"], row["hardness"], row["solids"]]])[0]
 
                     if pred_raw == 1:
@@ -295,7 +347,7 @@ with st.container():
     st.markdown("</div>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 📊 CITY COMPARISON (PM2.5) (FIXED for robustness)
+# 📊 CITY COMPARISON (PM2.5) (Unchanged from previous fix)
 # ---------------------------------------------------------
 st.markdown("<div class='section-title'>📊 Compare PM2.5 Across Cities</div>", unsafe_allow_html=True)
 
@@ -318,10 +370,8 @@ with st.container():
                 for c in cities_to_compare:
                     fixed_city = CITY_ALIASES.get(c.lower(), c).title()
                     
-                    # Call the function
                     pollutants = get_air_quality_for_city(fixed_city)
                     
-                    # --- CRITICAL FIX: Check for valid data before appending ---
                     if isinstance(pollutants, dict) and "pm2_5" in pollutants:
                         pm = pollutants["pm2_5"]
                         names.append(fixed_city)
@@ -332,7 +382,6 @@ with st.container():
                 if names:
                     df = pd.DataFrame({"City": names, "PM2.5": values})
                     
-                    # Set color scale based on PM2.5 limits (Good <= 30, Moderate <= 60, Poor > 60)
                     color_map = {}
                     for i in df.index:
                         pm_val = df.loc[i, 'PM2.5']
