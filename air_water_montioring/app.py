@@ -4,7 +4,52 @@ import pandas as pd
 import numpy as np
 import os
 import plotly.express as px
-from utils import get_air_quality_for_city # Assumes this function is defined in utils.py
+
+# ---------------------------------------------------------
+# MOCK UTILS FUNCTION (Replace this with your real API call)
+# ---------------------------------------------------------
+def get_air_quality_for_city(city_name):
+    """
+    MOCK FUNCTION: Replicates the expected output of an air quality API call.
+    
+    You MUST replace this with your actual function that calls a real API
+    (e.g., OpenAQ, waqi.info, etc.) to get live data.
+    
+    For demonstration purposes, it returns hardcoded data based on city name.
+    If the city is 'Jalandhar', it returns mock 'Poor' data.
+    """
+    city_name = city_name.lower().strip()
+
+    # --- Scenario 1: City with Good/Moderate Air ---
+    if "bengaluru" in city_name or "mumbai" in city_name or "delhi" in city_name:
+        return {
+            "pm2_5": np.random.uniform(40, 55), # Moderate
+            "pm10": np.random.uniform(70, 95),
+            "no2": np.random.uniform(30, 50),
+            "so2": np.random.uniform(10, 25),
+            "o3": np.random.uniform(45, 65),
+            "co": np.random.uniform(250, 350)
+        }
+    
+    # --- Scenario 2: City with Poor Air (e.g., Jalandhar) ---
+    elif "jalandhar" in city_name:
+        return {
+            "pm2_5": np.random.uniform(70, 150), # Poor
+            "pm10": np.random.uniform(120, 250),
+            "no2": np.random.uniform(60, 100),
+            "so2": np.random.uniform(50, 150),
+            "o3": np.random.uniform(30, 70),
+            "co": np.random.uniform(500, 800)
+        }
+
+    # --- Scenario 3: Failed Retrieval ---
+    # In a real app, this is what happens when the API call fails or returns no data.
+    # The main app code is now protected against this returning None or an error tuple.
+    else:
+        # Returning an empty dictionary is the safest way to handle failure
+        # as the main code checks for `if not isinstance(pollutants, dict) or not pollutants:`
+        return {}
+
 
 # ---------------------------------------------------------
 # PAGE CONFIG
@@ -63,18 +108,14 @@ st.markdown("<div class='main-title'>🌍 Air & Water Quality Monitoring</div>",
 # ---------------------------------------------------------
 # LOAD WATER DATA
 # ---------------------------------------------------------
-# NOTE: Ensure the 'data' and 'models' folders exist in the same directory as this script.
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(os.path.abspath(__file__)) if '__file__' in locals() else os.getcwd()
 water_path = os.path.join(BASE_DIR, "data", "water_quality_cities.csv")
-# Fallback for running locally without __file__ attribute (e.g., in some IDEs)
-if not os.path.exists(water_path):
-    water_path = os.path.join(os.getcwd(), "data", "water_quality_cities.csv") 
 
 try:
     df_water = pd.read_csv(water_path)
     df_water.columns = df_water.columns.str.lower().str.replace(" ", "_")
 except FileNotFoundError:
-    st.error("Error: water_quality_cities.csv not found. Please ensure it's in the 'data' folder.")
+    st.error("Error: water_quality_cities.csv not found. Please ensure it's in the 'data' folder next to your script.")
     df_water = pd.DataFrame({"city": [], "ph": [], "hardness": [], "solids": [], 
                              "chloramines": [], "sulfate": [], "conductivity": [], 
                              "organic_carbon": [], "trihalomethanes": [], "turbidity": []})
@@ -90,8 +131,6 @@ CITY_ALIASES = {
 # ---------------------------------------------------------
 def emoji_status(value, low, med):
     """Returns status based on value relative to low (Good limit) and med (Moderate limit)."""
-    # Note: For pH, the logic might need adjustment if it's based on an acceptable range (e.g., 6.5-8.5).
-    # This function assumes 'low' is the good threshold and 'med' is the moderate threshold (i.e., less is better).
     if value <= low:
         return "🟢 Good"
     elif value <= med:
@@ -99,7 +138,7 @@ def emoji_status(value, low, med):
     return "🔴 Poor"
 
 # ---------------------------------------------------------
-# 🌫️ AIR QUALITY SECTION (FIXED)
+# 🌫️ AIR QUALITY SECTION (FIXED for robustness)
 # ---------------------------------------------------------
 st.markdown("<div class='section-title'>🌫️ Air Quality</div>", unsafe_allow_html=True)
 
@@ -118,12 +157,12 @@ with st.container():
         try:
             c = CITY_ALIASES.get(city_air.lower().strip(), city_air).title() # Title case for display
             
-            # ❗ Fetch Air API (dict of pollutant values)
+            # ❗ Fetch Air API (dict of pollutant values) - Uses the function defined above
             pollutants = get_air_quality_for_city(c)
 
-            # --- CRITICAL FIX: Check if pollutants is a dictionary ---
+            # --- CRITICAL FIX: Check if pollutants is a dictionary and not empty ---
             if not isinstance(pollutants, dict) or not pollutants:
-                st.error(f"❌ Could not retrieve air quality data for **{c}**. Please check the city name or verify the `get_air_quality_for_city` function.")
+                st.error(f"❌ Could not retrieve air quality data for **{c}**. Please check the city name or verify the connection.")
             else:
                 st.subheader(f"Pollutant Levels in {c}")
 
@@ -154,10 +193,9 @@ with st.container():
                         i += 1
 
                 # ------- AI Category (based on PM2.5) -------
+                st.markdown("---") 
                 if "pm2_5" in pollutants:
                     pm = pollutants["pm2_5"]
-
-                    st.markdown("---") # Separator for AQI category
 
                     if pm <= 30:
                         st.success("🟢 **Air Quality Index: Good** — Air is safe to breathe.")
@@ -201,10 +239,8 @@ with st.container():
 
                 st.subheader(f"Water Parameters — {c2.title()}")
 
-                # Note: These limits are simple comparisons, not strict ranges for acceptability.
-                # 'low' here means a value up to the 'low' threshold is 'Good'.
                 water_limits = {
-                    "ph": (6.5, 8.5), # pH is better handled as a range, but using existing helper logic
+                    "ph": (6.5, 8.5),
                     "hardness": (150, 300),
                     "solids": (300, 600),
                     "chloramines": (2, 4),
@@ -218,11 +254,11 @@ with st.container():
                 cols = st.columns(3)
 
                 for i, key in enumerate(water_limits.keys()):
-                    if key in row: # Ensure the column exists
+                    if key in row: 
                         val = row[key]
                         low, med = water_limits[key]
                         
-                        # Simplified status check (not ideal for pH, but keeps consistent with emoji_status)
+                        # Simplified status check 
                         status = emoji_status(val, low, med) 
                         emoji = status.split()[0]
 
@@ -237,17 +273,15 @@ with st.container():
                 # ------- ML prediction -------
                 st.markdown("---")
                 
-                # Check for model file existence
                 model_path = os.path.join(BASE_DIR, "models", "water_quality_model.pkl")
                 if not os.path.exists(model_path):
-                     st.warning("⚠️ ML Model file 'water_quality_model.pkl' not found in 'models' directory. Cannot make prediction.")
+                     st.warning("⚠️ ML Model file 'water_quality_model.pkl' not found. Cannot make prediction.")
                 elif "ph" not in row or "hardness" not in row or "solids" not in row:
                      st.warning("⚠️ Missing critical water parameters (pH, Hardness, Solids) for ML prediction.")
                 else:
                     model_w = joblib.load(model_path)
                     
-                    # NOTE: Input array must match training features (ph, hardness, solids)
-                    # We are passing a 2D array: [[feature_1, feature_2, feature_3]]
+                    # Assuming the model uses pH, Hardness, and Solids for prediction
                     pred_raw = model_w.predict([[row["ph"], row["hardness"], row["solids"]]])[0]
 
                     if pred_raw == 1:
@@ -261,7 +295,7 @@ with st.container():
     st.markdown("</div>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 📊 CITY COMPARISON (PM2.5) (FIXED)
+# 📊 CITY COMPARISON (PM2.5) (FIXED for robustness)
 # ---------------------------------------------------------
 st.markdown("<div class='section-title'>📊 Compare PM2.5 Across Cities</div>", unsafe_allow_html=True)
 
@@ -279,26 +313,26 @@ with st.container():
             else:
                 names, values = [], []
                 
-                # Limit to 3 cities
                 cities_to_compare = input_cities[:3]
 
                 for c in cities_to_compare:
                     fixed_city = CITY_ALIASES.get(c.lower(), c).title()
                     
-                    # --- CRITICAL FIX: Check if pollutants is a dictionary and has pm2_5 ---
+                    # Call the function
                     pollutants = get_air_quality_for_city(fixed_city)
                     
+                    # --- CRITICAL FIX: Check for valid data before appending ---
                     if isinstance(pollutants, dict) and "pm2_5" in pollutants:
                         pm = pollutants["pm2_5"]
                         names.append(fixed_city)
                         values.append(pm)
                     else:
-                        st.warning(f"⚠️ Could not get PM2.5 data for **{fixed_city}**.")
+                        st.warning(f"⚠️ Could not get PM2.5 data for **{fixed_city}**. Excluded from chart.")
 
                 if names:
                     df = pd.DataFrame({"City": names, "PM2.5": values})
                     
-                    # Set color scale based on PM2.5 limits for better visualization
+                    # Set color scale based on PM2.5 limits (Good <= 30, Moderate <= 60, Poor > 60)
                     color_map = {}
                     for i in df.index:
                         pm_val = df.loc[i, 'PM2.5']
@@ -316,7 +350,7 @@ with st.container():
                         title="PM2.5 Comparison (Micrograms per cubic meter)",
                         color="City",
                         color_discrete_map=color_map,
-                        hole=0.3 # Add a hole for a donut chart look
+                        hole=0.3
                     )
                     
                     st.plotly_chart(fig, use_container_width=True)
