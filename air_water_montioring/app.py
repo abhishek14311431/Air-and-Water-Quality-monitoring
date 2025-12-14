@@ -183,6 +183,9 @@ with st.container():
 # =========================================================
 # 📊 CITY COMPARISON (TWO INPUT BOXES)
 # =========================================================
+# =========================================================
+# 📊 CITY COMPARISON (SAFE + TAGLINE)
+# =========================================================
 st.markdown("<div class='section-title'>📊 City PM2.5 Comparison</div>", unsafe_allow_html=True)
 
 with st.container():
@@ -193,29 +196,66 @@ with st.container():
     city2 = col2.text_input("City 2")
 
     if st.button("Compare Cities"):
-        if not city1 or not city2:
+        if not city1.strip() or not city2.strip():
             st.warning("⚠️ Please enter both city names.")
         else:
-            c1 = CITY_ALIASES.get(city1.lower(), city1)
-            c2 = CITY_ALIASES.get(city2.lower(), city2)
+            try:
+                c1 = CITY_ALIASES.get(city1.lower(), city1)
+                c2 = CITY_ALIASES.get(city2.lower(), city2)
 
-            pm1 = get_air_quality_for_city(c1)["pm2_5"]
-            pm2 = get_air_quality_for_city(c2)["pm2_5"]
+                data1 = get_air_quality_for_city(c1)
+                data2 = get_air_quality_for_city(c2)
 
-            df = pd.DataFrame({
-                "City": [c1.title(), c2.title()],
-                "PM2.5": [pm1, pm2]
-            })
+                pm1 = data1["pm2_5"]
+                pm2 = data2["pm2_5"]
 
-            colors = {
-                c1.title(): "green" if pm1 < pm2 else "red",
-                c2.title(): "green" if pm2 < pm1 else "red"
-            }
+                # ----- Decide pollution level -----
+                if pm1 > pm2:
+                    polluted = c1.title()
+                    cleaner = c2.title()
+                else:
+                    polluted = c2.title()
+                    cleaner = c1.title()
 
-            fig = px.pie(df, names="City", values="PM2.5",
-                         color="City", color_discrete_map=colors,
-                         title="PM2.5 Comparison")
+                # ----- Tagline -----
+                st.markdown(
+                    f"""
+                    <div class="tagline-box" style="border-left-color:red;">
+                    🔴 <b>{polluted}</b> is more polluted than <b>{cleaner}</b>.  
+                    Try to avoid outdoor exposure in <b>{polluted}</b>.
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
 
-            st.plotly_chart(fig, use_container_width=True)
+                # ----- Pie Chart -----
+                df = pd.DataFrame({
+                    "City": [c1.title(), c2.title()],
+                    "PM2.5": [pm1, pm2]
+                })
+
+                color_map = {
+                    polluted: "red",
+                    cleaner: "green"
+                }
+
+                fig = px.pie(
+                    df,
+                    names="City",
+                    values="PM2.5",
+                    color="City",
+                    color_discrete_map=color_map,
+                    title="PM2.5 Pollution Comparison",
+                    hole=0.35
+                )
+
+                st.plotly_chart(fig, use_container_width=True)
+
+            except ValueError as ve:
+                st.error(f"❌ {ve}")
+            except Exception:
+                st.error("❌ Unable to compare cities. Please try again.")
 
     st.markdown("</div>", unsafe_allow_html=True)
+
+
