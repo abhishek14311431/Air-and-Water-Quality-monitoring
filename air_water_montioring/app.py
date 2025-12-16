@@ -1,4 +1,4 @@
-'''import streamlit as st
+import streamlit as st
 import joblib
 import pandas as pd
 import os
@@ -277,5 +277,6 @@ with st.container():
                 st.info("Both cities have a similar PM2.5 level.")
 
 
-    st.markdown("</div>", unsafe_allow_html=True)''''
+    st.markdown("</div>", unsafe_allow_html=True)
+
 
